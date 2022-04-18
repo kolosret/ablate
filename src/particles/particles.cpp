@@ -8,6 +8,8 @@
 ablate::particles::Particles::Particles(std::string solverId, std::shared_ptr<domain::Region> region, std::shared_ptr<parameters::Parameters> options, int ndims, std::vector<ParticleField> fields,
                                         std::shared_ptr<particles::initializers::Initializer> initializer, std::vector<std::shared_ptr<mathFunctions::FieldFunction>> fieldInitialization,
                                         std::shared_ptr<mathFunctions::MathFunction> exactSolution)
+
+    //constructor
     : Solver(solverId, region, options),
       swarmDm(nullptr),
       ndims(ndims),
@@ -491,7 +493,7 @@ void ablate::particles::Particles::AdvectParticles(TS flowTS) {
     // Migrate any particles that have moved
     SwarmMigrate();
 }
-
+//check for PETSC errors
 static PetscErrorCode DMSequenceViewTimeHDF5(DM dm, PetscViewer viewer) {
     Vec stamp;
     PetscMPIInt rank;
