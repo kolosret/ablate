@@ -1,6 +1,7 @@
 #ifndef ABLATELIBRARY_INERTIAL_HPP
 #define ABLATELIBRARY_INERTIAL_HPP
 #include "particles.hpp"
+#include "drag/linear.hpp"
 
 namespace ablate::particles {
 
@@ -12,13 +13,14 @@ class Inertial : public Particles {
     PetscReal fluidViscosity;
     // gravity field
     PetscReal gravityField[3] = {0, 0, 0};
+    const std::shared_ptr<ablate::particles::drag::DragModel> dragModel;
+
 
     /*
      * Kinematics vector is a combination of particle velocity and position
      * in order to pass into TSSolve.
      */
     static PetscErrorCode PackKinematics(TS ts, Vec position, Vec velocity, Vec kinematics);
-
     /*
      * Unpack kinematics to get particle position and velocity
      */
@@ -30,9 +32,11 @@ class Inertial : public Particles {
      */
     static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec X, Vec F, void *ctx);
 
+
+
    public:
     Inertial(std::string solverId, std::shared_ptr<domain::Region> region, std::shared_ptr<parameters::Parameters> options, int ndims, std::shared_ptr<parameters::Parameters> parameters,
-             std::shared_ptr<particles::initializers::Initializer> initializer, std::vector<std::shared_ptr<mathFunctions::FieldFunction>> fieldInitialization,
+             std::shared_ptr<particles::initializers::Initializer> initializer, std::vector<std::shared_ptr<mathFunctions::FieldFunction>> fieldInitialization,std::shared_ptr<ablate::particles::drag::DragModel> dragModel,
              std::shared_ptr<mathFunctions::MathFunction> exactSolution = {});
     ~Inertial() override;
 

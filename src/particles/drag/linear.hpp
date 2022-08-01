@@ -7,7 +7,8 @@ namespace ablate::particles::drag {
 
 class Linear : public DragModel {
    public:
-    void ComputeDragForce(const PetscInt dim, const PetscReal *partVel, const PetscReal *flowVel, const PetscReal muF, const PetscReal rhoF, const PetscReal partDiam, PetscReal *dragForce) override;
+    void ComputeDragForce(const PetscInt dim, const PetscScalar *partVel, const PetscScalar *flowVel, const PetscScalar muF, const PetscScalar rhoF, const PetscScalar partDiam,const PetscScalar partDens, const PetscReal Re, PetscReal *dragSou)
+        override;
 };
 
 }  // namespace ablate::particles::drag

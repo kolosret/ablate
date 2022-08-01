@@ -1,0 +1,132 @@
+environment:
+  title: 2DTracerParticles
+  tagDirectory: true
+arguments:
+  dm_plex_separate_marker: ""
+  vel_petscspace_degree: 2
+  pres_petscspace_degree: 1
+  temp_petscspace_degree: 1
+timestepper:
+  name: theMainTimeStepper
+  io:
+    interval: 0
+  arguments:
+    ts_type: rk
+    ts_adapt_type: none
+    ts_max_steps: 2000
+    ts_max_time: 1
+  domain: !ablate::domain::BoxMeshBoundaryCells
+    name: simpleBoxField
+    faces: [ 25, 25]
+    lower: [ 0.0, 0.0 ]
+    upper: [ 1.0, .5 ]
+    simplex: false
+    mainRegion:
+      name: mainSolver
+    boundaryFaceRegion:
+      name: boundaryFaces
+    preModifiers:
+      - !ablate::domain::modifiers::SetFromOptions
+        dm_refine: 0
+      - !ablate::domain::modifiers::DistributeWithGhostCells
+    postModifiers:
+      - !ablate::domain::modifiers::MergeLabels
+        mergedRegion:
+          name: openBoundaryLabel
+        regions:
+          - name: boundaryCellsRight
+          - name: boundaryCellsTop
+          - name: boundaryCellsBottom
+      - !ablate::domain::modifiers::GhostBoundaryCells
+    fields:
+      - !ablate::finiteVolume::CompressibleFlowFields
+        eos: !ablate::eos::PerfectGas &eos
+          parameters:
+            gamma: 1.4
+            Rgas : 287.0
+  initialization:
+    - !ablate::finiteVolume::fieldFunctions::Euler
+      state:
+        eos: *eos
+        pressure:
+          !ablate::mathFunctions::Formula
+          formula: pinf + (rho*C^2)/Rc^2 * exp(-((x-l)^2 + (y)^2)/(2*Rc^2))
+          constants:
+            # define the constants used by the formulas
+            &constants
+            pinf: 101325.0
+            rho: 1.0
+            gamma: 1.4
+            Rgas: 287.0
+            Rc: 0.075
+            C: -0.09415446086
+            uo: 10.
+            l: .5
+        temperature:
+          !ablate::mathFunctions::Formula
+          formula: 1/(Rgas*rho) * (pinf + (rho*C^2)/Rc^2 * exp(-((x-l)^2 +(y)^2)/(2*Rc^2)))
+          constants: *constants
+        velocity:
+          !ablate::mathFunctions::Formula
+          formula: 10, 0
+          constants: *constants
+
+solvers:
+  - !ablate::finiteVolume::CompressibleFlowSolver
+    id: vortexFlowField
+    region:
+      name: mainSolver
+    fluxCalculator: !ablate::finiteVolume::fluxCalculator::AusmpUp
+      mInf: .3
+    parameters:
+      cfl: 0.5
+    transport:
+      mu:  0.02071398139
+    monitors:
+      - !ablate::monitors::MaxMinAverage
+        field: euler
+    eos: *eos
+    computePhysicsTimeStep: true
+  - !ablate::boundarySolver::BoundarySolver
+    id: inlet
+    region:
+      name: boundaryCellsLeft
+    fieldBoundary:
+      name: boundaryFaces
+    processes:
+      - !ablate::boundarySolver::lodi::Inlet
+        eos: *eos
+  - !ablate::boundarySolver::BoundarySolver
+    id: openBoundary
+    region:
+      name: openBoundaryLabel
+    fieldBoundary:
+      name: boundaryFaces
+    processes:
+      - !ablate::boundarySolver::lodi::OpenBoundary
+        eos: *eos
+        reflectFactor: 0.0
+        referencePressure: 101325.0
+        maxAcousticsLength: 1
+  - !ablate::particles::Inertial
+    id: flowInertialParticles
+    ndims: 2
+    options:
+      ts_dt: 0.005
+    parameters:
+      fluidDensity: 1.225
+      fluidViscosity: 50e-6
+      gravityField: [-9.81, 0, 0 ]
+    initializer: !ablate::particles::initializers::BoxInitializer
+      lower: [0.25,0.25]
+      upper: [0.75,0.75]
+      particlesPerDim: 1
+    fieldInitialization:
+      - fieldName: ParticleVelocity
+        field: "0,0"
+      - fieldName: FluidVelocity
+        field: "10,10"
+      - fieldName: ParticleDiameter
+        field: "0.001"
+    dragModel: !ablate::particles::drag::Linear
+

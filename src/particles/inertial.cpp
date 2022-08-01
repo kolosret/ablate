@@ -5,7 +5,8 @@ enum InertialParticleFields { Position, Velocity, TotalParticleField };
 
 ablate::particles::Inertial::Inertial(std::string solverId, std::shared_ptr<domain::Region> region, std::shared_ptr<parameters::Parameters> options, int ndims,
                                       std::shared_ptr<parameters::Parameters> parameters, std::shared_ptr<particles::initializers::Initializer> initializer,
-                                      std::vector<std::shared_ptr<mathFunctions::FieldFunction>> fieldInitialization, std::shared_ptr<mathFunctions::MathFunction> exactSolution)
+                                      std::vector<std::shared_ptr<mathFunctions::FieldFunction>> fieldInitialization, std::shared_ptr<ablate::particles::drag::DragModel> dragModel,
+                                      std::shared_ptr<mathFunctions::MathFunction> exactSolution)
     : Particles(solverId, region, options, ndims,
                 {
                     ParticleField{.name = ParticleVelocity, .components = CreateDimensionVector("VEL_", ndims), .type = domain::FieldLocation::SOL, .dataType = PETSC_REAL},
@@ -13,7 +14,8 @@ ablate::particles::Inertial::Inertial(std::string solverId, std::shared_ptr<doma
                     ParticleField{.name = ParticleDiameter, .type = domain::FieldLocation::AUX, .dataType = PETSC_REAL},
                     ParticleField{.name = ParticleDensity, .type = domain::FieldLocation::AUX, .dataType = PETSC_REAL},
                 },
-                initializer, fieldInitialization, exactSolution) {
+                initializer, fieldInitialization, exactSolution),dragModel(dragModel) {
+
     // initialize the constant values
     fluidDensity = parameters->GetExpect<PetscReal>("fluidDensity");
     fluidViscosity = parameters->GetExpect<PetscReal>("fluidViscosity");
@@ -21,11 +23,13 @@ ablate::particles::Inertial::Inertial(std::string solverId, std::shared_ptr<doma
     for (std::size_t i = 0; i < PetscMin(gravityVector.size(), 3); i++) {
         gravityField[i] = gravityVector[i];
     }
+
 }
 ablate::particles::Inertial::~Inertial() {}
 void ablate::particles::Inertial::Initialize() {
     // Call the base to initialize the flow
     Particles::Initialize();
+
 
     TSSetRHSFunction(particleTs, NULL, RHSFunction, this) >> checkError;
 
@@ -150,12 +154,13 @@ PetscErrorCode ablate::particles::Inertial::RHSFunction(TS ts, PetscReal t, Vec 
     // Calculate RHS of particle position and velocity equations
     PetscInt p, n;
     const PetscScalar *partVel, *fluidVel, *partDiam, *partDens;
-    PetscReal g[3] = {particles->gravityField[0], particles->gravityField[1], particles->gravityField[2]};  // gravity field
+//    PetscReal g[3] = {particles->gravityField[0], particles->gravityField[1], particles->gravityField[2]};  // gravity field
     PetscScalar muF = particles->fluidViscosity;
     PetscScalar rhoF = particles->fluidDensity;
 
-    PetscReal Rep, corFactor;
-    PetscScalar tauP;  // particle Stokes relaxation time
+    PetscReal Rep;
+//    PetscReal corFactor;
+//    PetscScalar tauP;  // particle Stokes relaxation time
 
     ierr = VecGetArray(F, &f);
     CHKERRQ(ierr);
@@ -168,21 +173,21 @@ PetscErrorCode ablate::particles::Inertial::RHSFunction(TS ts, PetscReal t, Vec 
     ierr = VecGetArrayRead(particleDiameter, &partDiam);
     CHKERRQ(ierr);
 
+    PetscReal dragSou [3];
+
+    //Loop over all the particles and input source terms(dx/dt=vel, dv/dt=F/m) into f
     for (p = 0; p < Np; ++p) {
+        PetscInt particleOffset=p*dim;
         Rep = 0.0;
         for (n = 0; n < dim; n++) {
-            Rep += rhoF * PetscSqr(fluidVel[p * dim + n] - partVel[p * dim + n]) * partDiam[p] / muF;
+            Rep += rhoF * PetscSqr(fluidVel[particleOffset + n] - partVel[p * dim + n]) * partDiam[p] / muF;
         }
-        // Correction factor to account for finite Rep on Stokes drag (see Schiller-Naumann drag closure)
-        corFactor = 1.0 + 0.15 * PetscPowReal(PetscSqrtReal(Rep), 0.687);
-        if (Rep < 0.1) {
-            corFactor = 1.0;  // returns Stokes drag for low speed particles
-        }
-        // Note: this function assumed that the solution vector order is correct
-        tauP = partDens[p] * PetscSqr(partDiam[p]) / (18.0 * muF);  // particle relaxation time
+
+        particles->dragModel->ComputeDragForce(dim, partVel + particleOffset,  fluidVel + particleOffset,  muF,  rhoF,  partDiam [p], partDens[p], Rep, dragSou);
+
         for (n = 0; n < dim; n++) {
             f[p * TotalParticleField * dim + n] = partVel[p * dim + n];
-            f[p * TotalParticleField * dim + dim + n] = corFactor * (fluidVel[p * dim + n] - partVel[p * dim + n]) / tauP + g[n] * (1.0 - rhoF / partDens[p]);
+            f[p * TotalParticleField * dim + dim + n] =  dragSou[n];
         }
     }
     ierr = VecRestoreArray(F, &f);
@@ -215,4 +220,5 @@ REGISTER(ablate::solver::Solver, ablate::particles::Inertial, "particles (with m
          ARG(ablate::parameters::Parameters, "parameters", "fluid parameters for the particles (fluidDensity, fluidViscosity, gravityField)"),
          ARG(ablate::particles::initializers::Initializer, "initializer", "the initial particle setup methods"),
          ARG(std::vector<ablate::mathFunctions::FieldFunction>, "fieldInitialization", "the initial particle fields setup methods"),
+         ARG(ablate::particles::drag::DragModel,"dragModel","what type of drg model to be selected"),
          OPT(ablate::mathFunctions::MathFunction, "exactSolution", "the particle location/velocity exact solution"));

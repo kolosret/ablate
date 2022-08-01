@@ -1,10 +1,10 @@
 target_sources(ablateLibrary
         PRIVATE
         linear.cpp
-        quadratic.cpp
+        stokes.cpp
 
         PUBLIC
         dragModel.hpp
         linear.hpp
-        quadratic.hpp
+        stokes.hpp
         )

@@ -250,8 +250,9 @@ TEST_P(InertialParticleExactTestFixture, ParticleShouldMoveAsExpected) {
             auto exactSolutionFunction = ablate::mathFunctions::Create(testingParam.particleExact, &testingParam.parameters);
 
             // Create an inertial particle object
+            auto dragmodel=std::make_shared<ablate::particles::drag::Linear>();
             auto particles = std::make_shared<ablate::particles::Inertial>(
-                "particle", ablate::domain::Region::ENTIREDOMAIN, particleOptions, 2, particleParameters, GetParam().particleInitializer, fieldInitialization, exactSolutionFunction);
+                "particle", ablate::domain::Region::ENTIREDOMAIN, particleOptions, 2, particleParameters, GetParam().particleInitializer, fieldInitialization,dragmodel, exactSolutionFunction);
 
             mesh->InitializeSubDomains({flowObject, particles},
                                        std::vector<std::shared_ptr<mathFunctions::FieldFunction>>{velocityExact, pressureExact, temperatureExact},
