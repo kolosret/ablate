@@ -180,7 +180,7 @@ PetscErrorCode ablate::particles::Inertial::RHSFunction(TS ts, PetscReal t, Vec 
         PetscInt particleOffset=p*dim;
         Rep = 0.0;
         for (n = 0; n < dim; n++) {
-            Rep += rhoF * PetscSqr(fluidVel[particleOffset + n] - partVel[p * dim + n]) * partDiam[p] / muF;
+            Rep += rhoF * PetscSqr(PetscAbs(fluidVel[particleOffset + n] - partVel[p * dim + n])) * partDiam[p] / muF;
         }
 
         particles->dragModel->ComputeDragForce(dim, partVel + particleOffset,  fluidVel + particleOffset,  muF,  rhoF,  partDiam [p], partDens[p], Rep, dragSou);
