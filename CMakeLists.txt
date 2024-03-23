@@ -72,7 +72,7 @@ target_link_libraries(ablateLibrary
         Threads::Threads
         nlohmann_json::nlohmann_json
         ${HDF5_LIBRARIES}
-        zerork_cfd_plugin
+        zerork_cfd_plugin_gpu
         PRIVATE
         chrestCompilerFlags)
 

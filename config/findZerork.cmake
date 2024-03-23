@@ -5,13 +5,13 @@ if (NOT (DEFINED ENV{ZERORK_DIR}))
 
     FetchContent_Declare(zerork
             GIT_REPOSITORY https://github.com/LLNL/zero-rk.git
-            GIT_TAG 71befd3f6ff6f49a66e07b82659b88d2bc1beb8c
+            GIT_TAG af50489b8ac6a24b025cf49f6e16399bdb5a8342  #points to zerork hip branch 3/22/24
             )
     FetchContent_MakeAvailable(zerork)
 
     set_include_directories_as_system(zerork)
 
-    install(TARGETS zerork_cfd_plugin zerork_vectormath ckconverter zerorkutilities zerork spify
+    install(TARGETS TARGETS zerork_cfd_plugin zerork_cfd_plugin_gpu zerork_vectormath ckconverter zerorkutilities zerork zerork_cuda spify
             EXPORT ablateTargets
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
