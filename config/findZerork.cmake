@@ -11,7 +11,7 @@ if (NOT (DEFINED ENV{ZERORK_DIR}))
 
     set_include_directories_as_system(zerork)
 
-    install(TARGETS zerork_cfd_plugin zerork_vectormath ckconverter zerorkutilities zerork spify
+    install(TARGETS zerork_cfd_plugin_gpu zerork_cfd_plugin ckconverter zerork_vectormath zerorkutilities zerork zerork_cuda spify
             EXPORT ablateTargets
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
