@@ -87,6 +87,9 @@ if (BLAS_FOUND)
             BLAS::BLAS)
 endif ()
 
+target_link_directories(ablateLibrary
+	PUBLIC
+	$ENV{ROCM_PATH}/lib)
 
 # Set the ablate library requirements
 set_property(TARGET ablateLibrary PROPERTY CXX_EXTENSIONS ON)
