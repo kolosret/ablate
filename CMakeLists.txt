@@ -91,7 +91,6 @@ target_link_directories(ablateLibrary
 	PUBLIC
 	$ENV{ROCM_PATH}/lib)
 
-
 # Set the ablate library requirements
 set_property(TARGET ablateLibrary PROPERTY CXX_EXTENSIONS ON)
 set_property(TARGET ablateLibrary PROPERTY CMAKE_CXX_STANDARD_REQUIRED ON)
