@@ -11,7 +11,7 @@ namespace ablate::particles::processes::burnmodel {
 
 class BurnModel {
    public:
-    virtual void ComputeBurnRate(const PetscReal *partVel, PetscReal *burnRate, PetscReal *energySource) = 0;
+    virtual void ComputeBurnRate(const std::shared_ptr<std::vector<double>> *farfield, PetscReal *burnRate, PetscReal *energySource) = 0;
 
     virtual ~BurnModel() = default;
 };
