@@ -20,10 +20,10 @@ class TwoZoneBoil: public BurnModel {
 
         //default values set for nheptane
         // TODO dont set default values or let user know default heptane is used...
-        double hc = 4.49260e7; //heat of combustion
-        double hfg = 316000; //latent heat
+        double Hcomb = 4.49260e7; //heat of combustion
+        double Hvap = 316000; //latent heat
         double Tboil = 371;
-        double kfuel = 0.0971;
+        double kliq = 0.0971;
         double Cpg = 3814;
         double rhol = 684;
         double rox = 11;

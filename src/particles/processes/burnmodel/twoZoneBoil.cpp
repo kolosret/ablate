@@ -7,9 +7,9 @@ void ablate::particles::processes::burnmodel::TwoZoneBoil::ComputeBurnRate(const
 
     /** \brief Two Zone burn model assuming boiling droplets
      * required inputs in SI units:
-     * hc, heat of combustion
-     * hfg, latent heat
-     * kfuel, fuel conductivity
+     * Hcomb, heat of combustion
+     * Hvap, latent heat
+     * kliq, fuel conductivity
      * Cpg, Cp of the gas at 1000K
      * rhol, liquid density
      * rox, mass of the oxidizer consumed for unit mass of fuel assuming F +rox Ox -> (1+rox)P
@@ -19,9 +19,9 @@ void ablate::particles::processes::burnmodel::TwoZoneBoil::ComputeBurnRate(const
 
     double Tfar=298;
     //Set properties form input file
-    double kg=(0.4*Fuelproperties.kfuel) + (0.6*Fuelproperties.kair);
+    double kg=(0.4*Fuelproperties.kliq) + (0.6*Fuelproperties.kair);
 
-    double BoxT=((Fuelproperties.hc/Fuelproperties.rox) + Fuelproperties.Cpg*(Tfar - Fuelproperties.Tboil))/Fuelproperties.hfg;
+    double BoxT=((Fuelproperties.Hcomb/Fuelproperties.rox) + Fuelproperties.Cpg*(Tfar - Fuelproperties.Tboil))/Fuelproperties.Hvap;
 
     *burnRate = (8*kg*log(1+BoxT))/(Fuelproperties.rhol*Fuelproperties.Cpg);
 
@@ -30,10 +30,10 @@ void ablate::particles::processes::burnmodel::TwoZoneBoil::ComputeBurnRate(const
 
 void ablate::particles::processes::burnmodel::TwoZoneBoil::Fuelproperties::Set(const std::shared_ptr<ablate::parameters::Parameters> &options) {
     if (options) {
-        hc = options->Get("hc", hc);
-        hfg = options->Get("hfg", hfg);
+        Hcomb = options->Get("Hcomb", Hcomb);
+        Hvap = options->Get("Hvap", Hvap);
         Tboil = options->Get("Tboil", Tboil);
-        kfuel = options->Get("kfuel", kfuel);
+        kliq = options->Get("kliq", kliq);
         rhol = options->Get("rhol", rhol);
         rox = options->Get("rox", rox);
         Cpg = options->Get("Cpg", Cpg);

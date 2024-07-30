@@ -8,7 +8,7 @@ ablate::particles::processes::burnmodel::TwoZone::TwoZone(const std::string fuel
 void ablate::particles::processes::burnmodel::TwoZone::ComputeBurnRate(const std::shared_ptr<std::vector<double>> *farfield, PetscReal *burnRate, PetscReal *energySource){
 
     /** \brief Two Zone burn model
-        ref: Vanilla two zone model using transfer numbers
+
      */
 
     *burnRate=1e-6;
@@ -21,8 +21,8 @@ void ablate::particles::processes::burnmodel::TwoZone::ComputeBurnRate(const std
 void ablate::particles::processes::burnmodel::TwoZone::solveYFs(double *YFs){
 
 
-
-    std::vector<double> reactorT(7);
+    // vector to contain important properties of the droplet
+    std::vector<double> dropletvector(7);
 
     //TODO figure out the molar weights
     double MWfarfield = 28.96;
@@ -37,48 +37,42 @@ void ablate::particles::processes::burnmodel::TwoZone::solveYFs(double *YFs){
     ablate::particles::processes::burnmodel::TwoZone::vaporpressure(&Tsurf,&Pvap);
 
     //Stuff to define
-    double MdotF_D_Mdot1;
+    // just keep it here:
+    double MdotF_D_Mdot1=1;
+    double Pi=3.141592653;
+
+
+    // TODO needs to change
     double MdotOX_D_Mdot2;
     double Yoxinf;
-    double rhoD1;
-    double rhoD2;
-    double Pi=3.14;
-    double Dp;
-    double k_l;
+    double Dp=0.001;
     double Apl = Dp*Dp*Pi;
     double Ts;
     double Tp;
-    double qlimfac=0.1;
-    double Cp1;
-    double Cp2;
-    double Hc;
     double Tinf;
-    double k1;
-    double Le2;
-    double Le1;
+
 
 
 
     double LHS = log((MdotF_D_Mdot1-*YFs) / MdotF_D_Mdot1) / log(MdotOX_D_Mdot2 / (MdotOX_D_Mdot2 - Yoxinf));
-    double rf_rs = 1 + LHS * rhoD1 / rhoD2;
-    double mdot1 = 2 * Pi * Dp * rhoD1 / (1. - 1. /(rf_rs + constSmall)) * log(MdotF_D_Mdot1 / (MdotF_D_Mdot1 - *YFs));
+    double rf_rs = 1 + LHS * zone1.rhoD / zone2.rhoD;
+    double mdot1 = 2 * Pi * Dp * zone1.rhoD / (1. - 1. /(rf_rs + constSmall)) * log(MdotF_D_Mdot1 / (MdotF_D_Mdot1 - *YFs));
     mdot1 = max(mdot1, 1e-22); // to prevent non-physical solution associated with negative mass flow.
 
-    double Qdot_condl = -k_l * Apl * (Ts - Tp) / (max(0.5*Dp, constSmall));
-    double Qdot_limiter = abs(qlimfac * mdot1 * fuelprops.Hvap / abs(Qdot_condl + 1e-22));
+    double Qdot_condl = -fuelprops.kliq * Apl * (Ts - Tp) / (max(0.5*Dp, constSmall));
+    double Qdot_limiter = abs(fuelprops.qlimfac * mdot1 * fuelprops.Hvap / abs(Qdot_condl + 1e-22));
     Qdot_limiter = min(Qdot_limiter,1.e+0);
     Qdot_condl = Qdot_condl * Qdot_limiter;
 
-    double QdotF_D_Mdot = Cp1 * Ts - fuelprops.Hvap + Qdot_condl / (mdot1 + 1e-22);		//no radiation
-    double QdotO_D_Mdot = QdotF_D_Mdot + MdotF_D_Mdot1 * Hc;
-    double Tf = (Cp2 * Tinf - QdotO_D_Mdot) * pow(MdotOX_D_Mdot2 / (MdotOX_D_Mdot2 - Yoxinf), 1 / Le2);
-    Tf = (QdotO_D_Mdot + Tf) /Cp2;
-    Ts = (QdotF_D_Mdot + (Cp1 * Tf - QdotF_D_Mdot) * exp(-mdot1 * Cp1 * (1. - 1. / rf_rs) / (2. * Pi * Dp * k1))) / Cp1;
+    double QdotF_D_Mdot = zone1.Cp * Ts - fuelprops.Hvap + Qdot_condl / (mdot1 + 1e-22);		//no radiation
+    double QdotO_D_Mdot = QdotF_D_Mdot + MdotF_D_Mdot1 * fuelprops.Hcomb;
+    double Tf = (zone2.Cp * Tinf - QdotO_D_Mdot) * pow(MdotOX_D_Mdot2 / (MdotOX_D_Mdot2 - Yoxinf), 1 / zone2.Le);
+    Tf = (QdotO_D_Mdot + Tf) /zone2.Cp;
+    Ts = (QdotF_D_Mdot + (zone1.Cp * Tf - QdotF_D_Mdot) * exp(-mdot1 * zone1.Cp * (1. - 1. / rf_rs) / (2. * Pi * Dp * zone1.k))) / zone1.Cp;
 
     // Recomputing Yfs using Tf and stepping from flame to surface using YFs-T relation.
-    //			QdotF_D_Mdot = Cp1 * Ts - fuel.Hvap(Ts) + Qdot_condl / (mdot1 + Const.TINY)+(Qdot_rad)/(mdot1 + Const.TINY); // need to recompute since Ts has been updated.
-    QdotF_D_Mdot = Cp1 * Ts - fuelprops.Hvap + Qdot_condl / (mdot1 + 1e-22);		//no radiation
-    double YFs_new = MdotF_D_Mdot1*(1.-pow((Cp1 * Ts - QdotF_D_Mdot) / (Cp1 * Tf - QdotF_D_Mdot),Le1));
+    QdotF_D_Mdot = zone1.Cp * Ts - fuelprops.Hvap + Qdot_condl / (mdot1 + 1e-22);		//no radiation
+    double YFs_new = MdotF_D_Mdot1*(1.-pow((zone1.Cp * Ts - QdotF_D_Mdot) / (zone1.Cp * Tf - QdotF_D_Mdot),zone1.Le));
 
 
 
@@ -91,13 +85,22 @@ void ablate::particles::processes::burnmodel::TwoZone::vaporpressure(double *Tem
 
      double Pref=101325;
      double Tref=298;
-     double RF=8314;
-     double hfg=316000;
+     double RF=8314/fuelprops.MW;
 
-     *Temp=1/(1/Tref + RF/hfg*log(Pref/(*Pvap)));
+     *Temp=1/(1/Tref + RF/fuelprops.Hvap*log(Pref/(*Pvap)));
 }
 
-
+void ablate::particles::processes::burnmodel::TwoZone::Fuelproperties::Set(const std::shared_ptr<ablate::parameters::Parameters> &options) {
+    if (options) {
+        //User provided values
+        fuelname = options->Get("fuelname", fuelname);
+        Hvap = options->Get("Hvap", Hvap);
+        Tboil = options->Get("Tboil", Tboil);
+        kliq = options->Get("kliq", kliq);
+        rholiq = options->Get("rhol", rholiq);
+        qlimfac = options->Get("qlimfac", qlimfac);
+    }
+}
 
 
 #include "registrar.hpp"
