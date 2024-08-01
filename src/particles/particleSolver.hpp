@@ -14,6 +14,7 @@ class ParticleSolver : public solver::Solver, public io::Serializable {
     /** common field names for particles **/
     inline static const char ParticleVelocity[] = "ParticleVelocity";
     inline static const char ParticleDiameter[] = "ParticleDiameter";
+    inline static const char ParticleTemperature[] = "ParticleTemperature";
     inline static const char ParticleDensity[] = "ParticleDensity";
     inline static const char PackedSolution[] = "PackedSolution";
     inline static const char ParticleInitialLocation[] = "InitialLocation";
