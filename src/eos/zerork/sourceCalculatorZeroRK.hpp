@@ -39,7 +39,7 @@ class SourceCalculator : public ChemistryModel::SourceCalculator, private utilit
         int verbose = 0;
 
         // load balancing
-        int loadBalance = 1;
+        int loadBalance = 2;  // default to time based load balancing
 
         // load balancing
         int gpu = 0;
