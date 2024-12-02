@@ -12,6 +12,9 @@
 #include "solver/solver.hpp"
 #include "solver/timeStepper.hpp"
 #include "utilities/vectorUtilities.hpp"
+#include "/usr/tce/packages/papi/papi-6.0.0.1/include/papi.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 namespace ablate::finiteVolume {
 
@@ -44,6 +47,7 @@ class FiniteVolumeSolver : public solver::CellSolver,
         std::string name; /**used for output**/
     };
 
+
     // hold the update functions for flux and point sources
     std::vector<CellInterpolant::DiscontinuousFluxFunctionDescription> discontinuousFluxFunctionDescriptions;
     std::vector<FaceInterpolant::ContinuousFluxFunctionDescription> continuousFluxFunctionDescriptions;
@@ -66,6 +70,12 @@ class FiniteVolumeSolver : public solver::CellSolver,
 
     //! hold the class responsible for compute face values;
     std::unique_ptr<FaceInterpolant> faceInterpolant = nullptr;
+
+    void handle_error (int retval)
+    {
+        printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
+        exit(1);
+    }
 
     //! hold the class responsible for compute cell based values;
     std::unique_ptr<CellInterpolant> cellInterpolant = nullptr;

@@ -50,6 +50,10 @@ include(config/findSLEPc.cmake)
 include(config/printVersion.cmake)
 find_package(HDF5 REQUIRED)
 
+add_library(PAPI INTERFACE IMPORTED GLOBAL)
+target_include_directories(PAPI INTERFACE "/usr/tce/packages/papi/papi-6.0.0.1/include")
+target_link_libraries(PAPI INTERFACE "/usr/tce/packages/papi/papi-6.0.0.1/lib/libpapi.so")
+
 # specify in the required libaries
 target_link_libraries(ablateLibrary
         PUBLIC
@@ -65,6 +69,7 @@ target_link_libraries(ablateLibrary
         nlohmann_json::nlohmann_json
         ${HDF5_LIBRARIES}
         ZERORK::zerork_cfd_plugin
+        PAPI
         PRIVATE
         chrestCompilerFlags)
 
@@ -75,6 +80,9 @@ if (BLAS_FOUND)
             PUBLIC
             BLAS::BLAS)
 endif ()
+
+
+
 
 #set ROCm libraries
 if(DEFINED ENV{ABLATE_GPU})
