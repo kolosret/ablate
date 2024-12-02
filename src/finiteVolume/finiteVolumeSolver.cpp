@@ -238,7 +238,7 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
     GetCellRange(cellRange);
 
 
-    PAPI_library_init(PAPI_VER_CURRENT);
+//    PAPI_library_init(PAPI_VER_CURRENT);
 
 //    const PAPI_hw_info_t *hwinfo = NULL;
 //
@@ -253,14 +253,6 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
 
     try {
         int retval;
-//        retval = PAPI_hl_region_begin("continous");
-
-//        if (retval != PAPI_OK) {
-//            std::cout << "Can't start papi for the discontinous function evaluations "
-//                      << "\n";
-////            throw std::runtime_error("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunction papi error");
-//        }
-
 
         retval = PAPI_hl_region_begin("computation");
             if ( retval != PAPI_OK )
@@ -287,12 +279,6 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
         exit(0);
 
 
-        //        retval = PAPI_hl_region_end("discountinous");
-//        if ( retval != PAPI_OK ){
-//            std::cout << "Error with papi for the discontinous function evaluations "
-//                      << "\n";
-////            throw std::runtime_error("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunction papi error.");
-//        }
 
 
     } catch (std::exception& exception) {
