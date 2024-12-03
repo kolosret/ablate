@@ -14,6 +14,9 @@
 #include "utilities/vectorUtilities.hpp"
 #include "/p/lustre2/kolosret/papi/src/install/include/papi.h"
 #include <sys/time.h>
+//#include <stdlib.h>
+//#include <stdio.h>
+#include <sys/resource.h>
 namespace ablate::finiteVolume {
 
 // forward declare the FlowProcesses
@@ -74,6 +77,32 @@ class FiniteVolumeSolver : public solver::CellSolver,
         printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
         exit(1);
     }
+
+//    void get_memory_usage() {
+//        FILE *file = fopen("/proc/self/statm", "r");
+//        if (file == NULL) {
+//            perror("Error opening /proc/self/statm");
+//            return;
+//        }
+//
+//        long pages;
+//        if (fscanf(file, "%ld", &pages) == 1) {
+//            long page_size = sysconf(_SC_PAGESIZE); // Get page size in bytes
+//            printf("Memory usage: %ld KB\n", (pages * page_size) / 1024);
+//        }
+//
+//        fclose(file);
+//    }
+
+    void get_memory_usage() {
+        struct rusage usage;
+        if (getrusage(RUSAGE_SELF, &usage) == 0) {
+            printf("Max resident set size: %ld KB\n", usage.ru_maxrss);
+        } else {
+            perror("getrusage failed");
+        }
+    }
+
 
 
     //! hold the class responsible for compute cell based values;

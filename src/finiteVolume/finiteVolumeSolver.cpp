@@ -241,6 +241,7 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
 
     PAPI_library_init(PAPI_VER_CURRENT);
 
+    get_memory_usage();
 
     try {
 
@@ -267,7 +268,7 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
            handle_error(retval);
         }
 //        printf("\033[0;32mPASSED\n\033[0m");
-
+//        get_memory_usage();
     } catch (std::exception& exception) {
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in CellInterpolant discontinuousFluxFunction: %s", exception.what());
     }
