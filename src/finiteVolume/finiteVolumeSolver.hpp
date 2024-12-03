@@ -12,10 +12,8 @@
 #include "solver/solver.hpp"
 #include "solver/timeStepper.hpp"
 #include "utilities/vectorUtilities.hpp"
-#include "/usr/tce/packages/papi/papi-6.0.0.1/include/papi.h"
-#include <stdio.h>
-#include <stdlib.h>
-
+#include "/p/lustre2/kolosret/papi/src/install/include/papi.h"
+#include <sys/time.h>
 namespace ablate::finiteVolume {
 
 // forward declare the FlowProcesses
@@ -76,6 +74,7 @@ class FiniteVolumeSolver : public solver::CellSolver,
         printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
         exit(1);
     }
+
 
     //! hold the class responsible for compute cell based values;
     std::unique_ptr<CellInterpolant> cellInterpolant = nullptr;

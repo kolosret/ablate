@@ -51,8 +51,8 @@ include(config/printVersion.cmake)
 find_package(HDF5 REQUIRED)
 
 add_library(PAPI INTERFACE IMPORTED GLOBAL)
-target_include_directories(PAPI INTERFACE "/usr/tce/packages/papi/papi-6.0.0.1/include")
-target_link_libraries(PAPI INTERFACE "/usr/tce/packages/papi/papi-6.0.0.1/lib/libpapi.so")
+target_include_directories(PAPI INTERFACE "/p/lustre2/kolosret/papi/src/install/include")
+target_link_libraries(PAPI INTERFACE "/p/lustre2/kolosret/papi/src/install/lib/libpapi.so")
 
 # specify in the required libaries
 target_link_libraries(ablateLibrary
