@@ -88,7 +88,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
 
     // there must be a separate gradient vector/dm for field because they can be different sizes
     std::vector<Vec> locGradVecs(nf, nullptr);
-
+    EndEvent();
     /* Reconstruct and limit cell gradients */
     // for each field compute the gradient in the localGrads vector
     for (const auto& field : subDomain->GetFields()) {
@@ -101,8 +101,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
             VecGetArrayRead(locGradVecs[field.subId], &locGradArrays[field.subId]) >> utilities::PetscUtilities::checkError;
         }
     }
-    EndEvent();
-    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionCOMPUTEFLUX");
+
+
     ComputeFluxSourceTerms(dm,
                            ds,
                            totDim,
@@ -122,7 +122,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
                            rhsFunctions,
                            faceRange,
                            cellRange);
-    EndEvent();
+
     StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionCleanup");
     // clean up cell grads
     for (const auto& field : subDomain->GetFields()) {
@@ -332,6 +332,7 @@ static PetscErrorCode DMPlexApplyLimiter_Internal(DM dm, DM dmCell, PetscLimiter
 void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::Field& field, Vec xLocalVec, Vec& gradLocVec, DM& dmGrad, Vec cellGeomVec, Vec faceGeomVec,
                                                                   const ablate::domain::Range& faceRange, const ablate::domain::Range& cellRange) {
     // get the FVM petsc field associated with this field
+    StartEvent("FiniteVolumeSolver::ComputeFieldGradients::Setup");
     auto fvm = (PetscFV)subDomain->GetPetscFieldObject(field);
     auto dm = subDomain->GetFieldDM(field);
 
@@ -370,7 +371,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::
     // Get the dof and dim
     PetscInt dim = subDomain->GetDimensions();
     PetscInt dof = field.numberComponents;
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::ComputeFieldGradients::Setup");
     for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
         PetscInt face = faceRange.points ? faceRange.points[f] : f;
 
@@ -413,7 +415,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::
             }
         }
     }
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::ComputeFieldGradients::Checklimiter");
     // Check for a limiter the limiter
     PetscLimiter lim;
     PetscFVGetLimiter(fvm, &lim) >> utilities::PetscUtilities::checkError;
@@ -469,15 +472,20 @@ void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::
         DMRestoreWorkArray(dm, dof, MPIU_REAL, &cellPhi) >> utilities::PetscUtilities::checkError;
         VecRestoreArrayRead(cellGeomVec, &cellGeometryArray);
     }
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::ComputeFieldGradients::Commgrad");
+
     // Communicate gradient values
     VecRestoreArray(gradGlobVec, &gradGlobArray) >> utilities::PetscUtilities::checkError;
     DMGlobalToLocalBegin(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
     DMGlobalToLocalEnd(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::ComputeFieldGradients::Commgrad2");
     // cleanup
     VecRestoreArrayRead(xLocalVec, &xLocalArray) >> utilities::PetscUtilities::checkError;
     VecRestoreArrayRead(faceGeomVec, &faceGeometryArray) >> utilities::PetscUtilities::checkError;
     DMRestoreGlobalVector(dmGrad, &gradGlobVec) >> utilities::PetscUtilities::checkError;
+    EndEvent();
 }
 
 void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscDS ds, PetscInt totDim, const PetscScalar* xArray, DM dmAux, PetscDS dsAux, PetscInt totDimAux,
@@ -486,6 +494,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
                                                                    const std::shared_ptr<domain::Region>& solverRegion,
                                                                    std::vector<CellInterpolant::DiscontinuousFluxFunctionDescription>& rhsFunctions, const ablate::domain::Range& faceRange,
                                                                    const ablate::domain::Range& cellRange) {
+    StartEvent("FiniteVolumeSolver::Computefluxsource::Setup");
     PetscInt dim = subDomain->GetDimensions();
 
     // Size up the work arrays (uL, uR, gradL, gradR, auxL, auxR, gradAuxL, gradAuxR), these are only sized for one face at a time
@@ -512,7 +521,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
     // Get the full set of offsets from the ds
     PetscInt* uOffTotal;
     PetscDSGetComponentOffsets(ds, &uOffTotal) >> utilities::PetscUtilities::checkError;
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::Computefluxsource::sizeproblem");
     for (std::size_t fun = 0; fun < rhsFunctions.size(); fun++) {
         const auto& field = subDomain->GetField(rhsFunctions[fun].field);
         fluxComponentSize[fun] = field.numberComponents;
@@ -521,6 +531,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
             uOff[fun].push_back(uOffTotal[rhsFunctions[fun].inputFields[f]]);
         }
     }
+
+
 
     if (dsAux) {
         PetscInt* auxOffTotal;
@@ -540,8 +552,11 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
     PetscInt regionValue = 0;
     domain::Region::GetLabel(solverRegion, subDomain->GetDM(), regionLabel, regionValue);
 
+    EndEvent();
+
     // March over each face in this region
     for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
+        StartEvent("FiniteVolumeSolver::Computefluxsource::Calc1");
         const PetscInt face = faceRange.points ? faceRange.points[f] : f;
 
         // make sure that this is a valid face
@@ -550,7 +565,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
         DMPlexGetSupportSize(dm, face, &nsupp) >> utilities::PetscUtilities::checkError;
         DMPlexGetTreeChildren(dm, face, &nchild, nullptr) >> utilities::PetscUtilities::checkError;
         if (ghost >= 0 || nsupp > 2 || nchild > 0) continue;
-
+        EndEvent();
+        StartEvent("FiniteVolumeSolver::Computefluxsource::Calc2");
         // Get the face geometry
         const PetscInt* faceCells;
         PetscFVFaceGeom* fg;
@@ -576,7 +592,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
             DMPlexPointLocalRead(dmAux, faceCells[0], auxArray, &auxL) >> utilities::PetscUtilities::checkError;
             DMPlexPointLocalRead(dmAux, faceCells[1], auxArray, &auxR) >> utilities::PetscUtilities::checkError;
         }
-
+        EndEvent();
+        StartEvent("FiniteVolumeSolver::Computefluxsource::Calc3");
         // March over each source function
         for (std::size_t fun = 0; fun < rhsFunctions.size(); fun++) {
             PetscArrayzero(flux, totDim) >> utilities::PetscUtilities::checkError;
@@ -608,7 +625,9 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
                 if (fR) fR[d] += flux[d] / cgR->volume;
             }
         }
+        EndEvent();
     }
+
 
     // cleanup
     DMRestoreWorkArray(dm, totDim, MPIU_SCALAR, &flux) >> utilities::PetscUtilities::checkError;
