@@ -252,15 +252,19 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
             if ( retval != PAPI_OK )
                 handle_error(retval);
 
-        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunction");
+//        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunction");
         if (!discontinuousFluxFunctionDescriptions.empty()) {
-            if (cellInterpolant == nullptr) {
-                cellInterpolant = std::make_unique<CellInterpolant>(subDomain, GetRegion(), faceGeomVec, cellGeomVec);
-            }
 
+            if (cellInterpolant == nullptr) {
+                StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionInitialize");
+                cellInterpolant = std::make_unique<CellInterpolant>(subDomain, GetRegion(), faceGeomVec, cellGeomVec);
+                EndEvent();
+            }
+            StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionComputeRHS");
             cellInterpolant->ComputeRHS(time, locXVec, subDomain->GetAuxVector(), locFVec, GetRegion(), discontinuousFluxFunctionDescriptions, faceRange, cellRange, cellGeomVec, faceGeomVec);
+            EndEvent();
         }
-        EndEvent();
+
 
         retval = PAPI_hl_region_end("discontinous");
         if ( retval != PAPI_OK ){

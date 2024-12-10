@@ -42,6 +42,7 @@ ablate::finiteVolume::CellInterpolant::~CellInterpolant() {
 void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXVec, Vec locAuxVec, Vec locFVec, const std::shared_ptr<domain::Region>& solverRegion,
                                                        std::vector<CellInterpolant::DiscontinuousFluxFunctionDescription>& rhsFunctions, const ablate::domain::Range& faceRange,
                                                        const ablate::domain::Range& cellRange, Vec cellGeomVec, Vec faceGeomVec) {
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionCall1");
     auto dm = subDomain->GetDM();
     auto dmAux = subDomain->GetAuxDM();
 
@@ -62,7 +63,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
         PetscDSGetTotalDimension(dsAux, &totDimAux) >> utilities::PetscUtilities::checkError;
         PetscDSGetNumFields(dsAux, &naf) >> utilities::PetscUtilities::checkError;
     }
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionCall2");
     /* 2: Get geometric data */
     // We can use a single call for the geometry data because it does not depend on the fv object
     const PetscScalar* cellGeomArray = nullptr;
@@ -99,7 +101,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
             VecGetArrayRead(locGradVecs[field.subId], &locGradArrays[field.subId]) >> utilities::PetscUtilities::checkError;
         }
     }
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionCOMPUTEFLUX");
     ComputeFluxSourceTerms(dm,
                            ds,
                            totDim,
@@ -119,7 +122,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
                            rhsFunctions,
                            faceRange,
                            cellRange);
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionCleanup");
     // clean up cell grads
     for (const auto& field : subDomain->GetFields()) {
         if (locGradVecs[field.subId]) {
@@ -137,6 +141,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
     VecRestoreArray(locFVec, &locFArray) >> utilities::PetscUtilities::checkError;
     VecRestoreArrayRead(faceGeomVec, (const PetscScalar**)&faceGeomArray) >> utilities::PetscUtilities::checkError;
     VecRestoreArrayRead(cellGeomVec, (const PetscScalar**)&cellGeomArray) >> utilities::PetscUtilities::checkError;
+    EndEvent();
 }
 
 void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXVec, Vec locAuxVec, Vec locFVec, const std::shared_ptr<domain::Region>& solverRegion,
