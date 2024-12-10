@@ -556,7 +556,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
 
     // March over each face in this region
     for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
-        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc1");
+//        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc1");
         const PetscInt face = faceRange.points ? faceRange.points[f] : f;
 
         // make sure that this is a valid face
@@ -564,8 +564,11 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
         DMLabelGetValue(ghostLabel, face, &ghost) >> utilities::PetscUtilities::checkError;
         DMPlexGetSupportSize(dm, face, &nsupp) >> utilities::PetscUtilities::checkError;
         DMPlexGetTreeChildren(dm, face, &nchild, nullptr) >> utilities::PetscUtilities::checkError;
-        if (ghost >= 0 || nsupp > 2 || nchild > 0) continue;
-        EndEvent();
+        if (ghost >= 0 || nsupp > 2 || nchild > 0) {
+            continue;
+
+        }
+//        EndEvent();
         StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc2");
         // Get the face geometry
         const PetscInt* faceCells;
