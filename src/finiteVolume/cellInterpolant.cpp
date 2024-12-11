@@ -599,11 +599,12 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
 //        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc3");
         // March over each source function
         for (std::size_t fun = 0; fun < rhsFunctions.size(); fun++) {
-
+            StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::FluxTimer1");
             PetscInt fluxOffset = 0;  // Flux offset for the function ( Currently calculated by just adding the number of components of the previous fields)
             PetscArrayzero(flux, totDim) >> utilities::PetscUtilities::checkError;
             const auto& rhsFluxFunctionDescription = rhsFunctions[fun];
             rhsFluxFunctionDescription.function(dim, fg, uOff[fun].data(), uL, uR, aOff[fun].data(), auxL, auxR, flux, rhsFluxFunctionDescription.context) >> utilities::PetscUtilities::checkError;
+            EndEvent();
             // add the fluxes back to the cell
             for (std::size_t updateFieldIdx = 0; updateFieldIdx < rhsFunctions[fun].updateFields.size(); updateFieldIdx++) {
                 PetscInt cellLabelValue = regionValue;
