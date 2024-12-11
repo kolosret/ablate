@@ -473,6 +473,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::
     }
     EndEvent();
 
+    MPI_Barrier(PETSC_COMM_WORLD);
     StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad1");
     // Communicate gradient values
     VecRestoreArray(gradGlobVec, &gradGlobArray) >> utilities::PetscUtilities::checkError;

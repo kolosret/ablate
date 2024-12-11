@@ -226,8 +226,10 @@ void ablate::finiteVolume::FiniteVolumeSolver::Initialize() {
     // call updateAuxFields In case these are needed before first preRHS call
     Vec locXVec;
     DMGetLocalVector(subDomain->GetDM(), &locXVec) >> utilities::PetscUtilities::checkError;
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::commfinitevol");
     DMGlobalToLocalBegin(subDomain->GetDM(), subDomain->GetSolutionVector(), INSERT_VALUES, locXVec) >> utilities::PetscUtilities::checkError;
     DMGlobalToLocalEnd(subDomain->GetDM(), subDomain->GetSolutionVector(), INSERT_VALUES, locXVec) >> utilities::PetscUtilities::checkError;
+    EndEvent();
     UpdateAuxFields(NAN, locXVec, subDomain->GetAuxVector());
     DMRestoreLocalVector(subDomain->GetDM(), &locXVec) >> utilities::PetscUtilities::checkError;
 }
