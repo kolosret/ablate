@@ -16,6 +16,8 @@ target_sources(ablateLibrary
         thermophoreticDiffusion.cpp
         surfaceForce.cpp
         soot.cpp
+        compactCompressibleNSSpeciesTransport.cpp
+        compactCompressibleNSSpeciesNDDTransport.cpp
 
         PUBLIC
         process.hpp
@@ -35,4 +37,6 @@ target_sources(ablateLibrary
         thermophoreticDiffusion.hpp
         surfaceForce.hpp
         soot.hpp
+        compactCompressibleNSSpeciesTransport.hpp
+        compactCompressibleNSSpeciesNDDTransport.hpp
         )

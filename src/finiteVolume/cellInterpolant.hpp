@@ -26,7 +26,7 @@ class CellInterpolant: private utilities::Loggable<CellInterpolant> {
         DiscontinuousFluxFunction function;
         void* context;
 
-        PetscInt field;
+        std::vector<PetscInt> updateFields;
         std::vector<PetscInt> inputFields;
         std::vector<PetscInt> auxFields;
     };
