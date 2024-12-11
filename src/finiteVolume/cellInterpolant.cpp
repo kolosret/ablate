@@ -554,9 +554,10 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
     PetscInt regionValue = 0;
     domain::Region::GetLabel(solverRegion, subDomain->GetDM(), regionLabel, regionValue);
 
+    EndEvent();
     // March over each face in this region
     for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
-//        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc1");
+
         const PetscInt face = faceRange.points ? faceRange.points[f] : f;
 
         // make sure that this is a valid face
@@ -568,7 +569,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
             continue;
 
         }
-//        EndEvent();
+
         StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc2");
         // Get the face geometry
         const PetscInt* faceCells;
@@ -633,7 +634,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
                 }
                 fluxOffset += fluxComponentSize[fun][updateFieldIdx];
             }
-            EndEvent();
+
         }
 //        EndEvent();
     }
