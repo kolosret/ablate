@@ -7,6 +7,8 @@
 #include "utilities/mathUtilities.hpp"
 #include "utilities/mpiUtilities.hpp"
 #include "utilities/petscUtilities.hpp"
+//#include "/usr/tce/packages/papi/papi-6.0.0.1/include/papi.h"
+
 
 ablate::finiteVolume::FiniteVolumeSolver::FiniteVolumeSolver(std::string solverId, std::shared_ptr<domain::Region> region, std::shared_ptr<parameters::Parameters> options,
                                                              std::vector<std::shared_ptr<processes::Process>> processes,
@@ -235,16 +237,42 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
     ablate::domain::Range faceRange, cellRange;
     GetFaceRange(faceRange);
     GetCellRange(cellRange);
-    try {
-        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunction");
-        if (!discontinuousFluxFunctionDescriptions.empty()) {
-            if (cellInterpolant == nullptr) {
-                cellInterpolant = std::make_unique<CellInterpolant>(subDomain, GetRegion(), faceGeomVec, cellGeomVec);
-            }
 
+
+    PAPI_library_init(PAPI_VER_CURRENT);
+
+    get_memory_usage();
+
+    try {
+
+
+        int retval;
+
+        retval = PAPI_hl_region_begin("discontinous");
+            if ( retval != PAPI_OK )
+                handle_error(retval);
+
+//        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunction");
+        if (!discontinuousFluxFunctionDescriptions.empty()) {
+
+            if (cellInterpolant == nullptr) {
+                StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionInitialize");
+                cellInterpolant = std::make_unique<CellInterpolant>(subDomain, GetRegion(), faceGeomVec, cellGeomVec);
+                EndEvent();
+            }
+            StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionComputeRHS");
             cellInterpolant->ComputeRHS(time, locXVec, subDomain->GetAuxVector(), locFVec, GetRegion(), discontinuousFluxFunctionDescriptions, faceRange, cellRange, cellGeomVec, faceGeomVec);
+            EndEvent();
         }
-        EndEvent();
+
+
+        retval = PAPI_hl_region_end("discontinous");
+        if ( retval != PAPI_OK ){
+
+           handle_error(retval);
+        }
+//        printf("\033[0;32mPASSED\n\033[0m");
+//        get_memory_usage();
     } catch (std::exception& exception) {
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in CellInterpolant discontinuousFluxFunction: %s", exception.what());
     }
@@ -264,6 +292,11 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
     }
 
     try {
+        int retval;
+        retval = PAPI_hl_region_begin("continous");
+        if ( retval != PAPI_OK )
+            handle_error(retval);
+
         StartEvent("FiniteVolumeSolver::ComputeRHSFunction::continuousFluxFunctionDescriptions");
         if (!continuousFluxFunctionDescriptions.empty()) {
             if (faceInterpolant == nullptr) {
@@ -273,6 +306,12 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
             faceInterpolant->ComputeRHS(time, locXVec, subDomain->GetAuxVector(), locFVec, GetRegion(), continuousFluxFunctionDescriptions, faceRange, cellGeomVec, faceGeomVec);
         }
         EndEvent();
+
+        retval = PAPI_hl_region_end("continous");
+        if ( retval != PAPI_OK ){
+
+            handle_error(retval);
+        }
     } catch (std::exception& exception) {
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in FaceInterpolant continuousFluxFunctionDescriptions: %s", exception.what());
     }
