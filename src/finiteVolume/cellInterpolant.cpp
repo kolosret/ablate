@@ -473,13 +473,14 @@ void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::
         VecRestoreArrayRead(cellGeomVec, &cellGeometryArray);
     }
     EndEvent();
-    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad");
 
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad");
     // Communicate gradient values
     VecRestoreArray(gradGlobVec, &gradGlobArray) >> utilities::PetscUtilities::checkError;
     DMGlobalToLocalBegin(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
     DMGlobalToLocalEnd(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
     EndEvent();
+
     StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad2");
     // cleanup
     VecRestoreArrayRead(xLocalVec, &xLocalArray) >> utilities::PetscUtilities::checkError;
@@ -596,13 +597,15 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
             DMPlexPointLocalRead(dmAux, faceCells[1], auxArray, &auxR) >> utilities::PetscUtilities::checkError;
         }
         EndEvent();
-        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc3");
+//        StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc3");
         // March over each source function
         for (std::size_t fun = 0; fun < rhsFunctions.size(); fun++) {
+            StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc3::Flux1");
             PetscArrayzero(flux, totDim) >> utilities::PetscUtilities::checkError;
             const auto& rhsFluxFunctionDescription = rhsFunctions[fun];
             rhsFluxFunctionDescription.function(dim, fg, uOff[fun].data(), uL, uR, aOff[fun].data(), auxL, auxR, flux, rhsFluxFunctionDescription.context) >> utilities::PetscUtilities::checkError;
-
+            EndEvent();
+            StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc3::Flux2");
             // add the flux back to the cell
             PetscScalar *fL = nullptr, *fR = nullptr;
             PetscInt cellLabelValue = regionValue;
@@ -613,7 +616,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
             if (ghost <= 0 && regionValue == cellLabelValue) {
                 DMPlexPointLocalFieldRef(dm, faceCells[0], fluxId[fun], locFArray, &fL) >> utilities::PetscUtilities::checkError;
             }
-
+            EndEvent();
+            StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::Calc3::Flux3");
             cellLabelValue = regionValue;
             DMLabelGetValue(ghostLabel, faceCells[1], &ghost) >> utilities::PetscUtilities::checkError;
             if (regionLabel) {
@@ -627,8 +631,9 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
                 if (fL) fL[d] -= flux[d] / cgL->volume;
                 if (fR) fR[d] += flux[d] / cgR->volume;
             }
+            EndEvent();
         }
-        EndEvent();
+//        EndEvent();
     }
 
 
