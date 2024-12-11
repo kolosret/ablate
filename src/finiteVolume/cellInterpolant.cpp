@@ -606,6 +606,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
             const auto& rhsFluxFunctionDescription = rhsFunctions[fun];
             rhsFluxFunctionDescription.function(dim, fg, uOff[fun].data(), uL, uR, aOff[fun].data(), auxL, auxR, flux, rhsFluxFunctionDescription.context) >> utilities::PetscUtilities::checkError;
             EndEvent();
+            StartEvent("FiniteVolumeSolver::ComputeRHSFunction::Computefluxsource::FluxTimer2");
             // add the fluxes back to the cell
             for (std::size_t updateFieldIdx = 0; updateFieldIdx < rhsFunctions[fun].updateFields.size(); updateFieldIdx++) {
                 PetscInt cellLabelValue = regionValue;
@@ -634,6 +635,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
                 }
                 fluxOffset += fluxComponentSize[fun][updateFieldIdx];
             }
+            EndEvent();
 
         }
 //        EndEvent();
