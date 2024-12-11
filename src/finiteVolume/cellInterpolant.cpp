@@ -473,14 +473,17 @@ void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::
     }
     EndEvent();
 
-    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad");
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad1");
     // Communicate gradient values
     VecRestoreArray(gradGlobVec, &gradGlobArray) >> utilities::PetscUtilities::checkError;
-    DMGlobalToLocalBegin(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
-    DMGlobalToLocalEnd(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad2");
+    DMGlobalToLocal(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
+//    DMGlobalToLocalBegin(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
+//    DMGlobalToLocalEnd(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
     EndEvent();
 
-    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad2");
+    StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::cleanup2");
     // cleanup
     VecRestoreArrayRead(xLocalVec, &xLocalArray) >> utilities::PetscUtilities::checkError;
     VecRestoreArrayRead(faceGeomVec, &faceGeometryArray) >> utilities::PetscUtilities::checkError;
