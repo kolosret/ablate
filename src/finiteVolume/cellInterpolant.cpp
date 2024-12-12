@@ -42,6 +42,7 @@ ablate::finiteVolume::CellInterpolant::~CellInterpolant() {
 void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXVec, Vec locAuxVec, Vec locFVec, const std::shared_ptr<domain::Region>& solverRegion,
                                                        std::vector<CellInterpolant::DiscontinuousFluxFunctionDescription>& rhsFunctions, const ablate::domain::Range& faceRange,
                                                        const ablate::domain::Range& cellRange, Vec cellGeomVec, Vec faceGeomVec) {
+    MPI_Barrier(PETSC_COMM_WORLD);
     StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionCall1");
     auto dm = subDomain->GetDM();
     auto dmAux = subDomain->GetAuxDM();
@@ -89,6 +90,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
     // there must be a separate gradient vector/dm for field because they can be different sizes
     std::vector<Vec> locGradVecs(nf, nullptr);
     EndEvent();
+    MPI_Barrier(PETSC_COMM_WORLD);
     /* Reconstruct and limit cell gradients */
     // for each field compute the gradient in the localGrads vector
     for (const auto& field : subDomain->GetFields()) {
@@ -479,9 +481,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::
     VecRestoreArray(gradGlobVec, &gradGlobArray) >> utilities::PetscUtilities::checkError;
     EndEvent();
     StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::Commgrad2");
-    DMGlobalToLocal(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
-//    DMGlobalToLocalBegin(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
-//    DMGlobalToLocalEnd(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
+    DMGlobalToLocalBegin(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
+    DMGlobalToLocalEnd(dmGrad, gradGlobVec, INSERT_VALUES, gradLocVec) >> utilities::PetscUtilities::checkError;
     EndEvent();
 
     StartEvent("FiniteVolumeSolver::ComputeRHSFunction::ComputeFieldGradients::cleanup2");
