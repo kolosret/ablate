@@ -247,7 +247,7 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
 
     try {
 
-
+        MPI_Barrier(PETSC_COMM_WORLD);
         int retval;
 
         retval = PAPI_hl_region_begin("discontinous");
@@ -262,6 +262,7 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
                 cellInterpolant = std::make_unique<CellInterpolant>(subDomain, GetRegion(), faceGeomVec, cellGeomVec);
                 EndEvent();
             }
+            MPI_Barrier(PETSC_COMM_WORLD);
             StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunctionComputeRHS");
             cellInterpolant->ComputeRHS(time, locXVec, subDomain->GetAuxVector(), locFVec, GetRegion(), discontinuousFluxFunctionDescriptions, faceRange, cellRange, cellGeomVec, faceGeomVec);
             EndEvent();
