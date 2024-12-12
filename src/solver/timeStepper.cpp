@@ -329,7 +329,10 @@ PetscErrorCode ablate::solver::TimeStepper::SolverComputeIJacobianLocal(DM, Pets
     PetscFunctionReturn(0);
 }
 PetscErrorCode ablate::solver::TimeStepper::SolverComputeRHSFunction(TS ts, PetscReal time, Vec X, Vec F, void* timeStepperCtx) {
+
+    MPI_Barrier(PETSC_COMM_WORLD);
     PetscFunctionBeginUser;
+
     auto timeStepper = (ablate::solver::TimeStepper*)timeStepperCtx;
 
     timeStepper->StartEvent("SolverComputeRHSFunction::DMGlobalToLocal");
@@ -343,12 +346,12 @@ PetscErrorCode ablate::solver::TimeStepper::SolverComputeRHSFunction(TS ts, Pets
     DMGlobalToLocalBegin(dm, X, INSERT_VALUES, locX);
     DMGlobalToLocalEnd(dm, X, INSERT_VALUES, locX);
     timeStepper->EndEvent();
-
+    MPI_Barrier(PETSC_COMM_WORLD);
     // Update the boundary conditions
     timeStepper->StartEvent("SolverComputeRHSFunction::SolverComputeBoundaryFunctionLocal");
     PetscCall(SolverComputeBoundaryFunctionLocal(dm, time, locX, nullptr, timeStepperCtx));
     timeStepper->EndEvent();
-
+    MPI_Barrier(PETSC_COMM_WORLD);
     // Call each of the provided pre RHS functions
     timeStepper->StartEvent("SolverComputeRHSFunction::PreRHSFunction");
     for (auto& solver : timeStepper->rhsFunctionSolvers) {
