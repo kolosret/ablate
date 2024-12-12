@@ -362,7 +362,7 @@ PetscErrorCode ablate::solver::TimeStepper::SolverComputeRHSFunction(TS ts, Pets
     // Zero out the temp locF array
     VecZeroEntries(locF);
     CHKMEMQ;
-
+    MPI_Barrier(PETSC_COMM_WORLD);
     // Call each of the provided RHS functions
     timeStepper->StartEvent("SolverComputeRHSFunction::ComputeRHSFunction");
     for (auto& solver : timeStepper->rhsFunctionSolvers) {
