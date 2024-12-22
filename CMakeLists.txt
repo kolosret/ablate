@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.18.4)
 include(config/petscCompilers.cmake)
 
 # Set the project details
-project(ablateLibrary VERSION 0.12.34)
+project(ablateLibrary VERSION 0.12.35)
 
 # Load the Required 3rd Party Libaries
 pkg_check_modules(PETSc REQUIRED IMPORTED_TARGET GLOBAL PETSc)
@@ -24,6 +24,9 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
     include(CTest)
 endif ()
+
+# Create the library for ablate
+add_library(ablateLibrary SHARED)
 
 # Load in the subdirectories for the ablate library
 add_subdirectory(src)
