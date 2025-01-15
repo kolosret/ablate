@@ -18,7 +18,8 @@ class LiquidFuel {
         double MW;
         double rhol;
         double kl;
-        double Cp;
+        double Cpg; // Gas phase specific heat
+        double Cvl; // Liquid phase specific heat
     };
 
     struct AntoineConstants {

@@ -10,8 +10,11 @@ class waxFuel : public ablate::particles::processes::burningModel::LiquidFuel {
    public:
     // Constructor with initializer list
     waxFuel()
-        : LiquidFuel("wax", {0.33E6, 41.1E6, 450, 800, 0.12, 3330}, {7.1356, 2276.9, 75.9})  // Initialize base class members
+        : LiquidFuel("wax", {0.33E6, 41.1E6, 450, 800, 0.12, 2920,1356}, {7.1356, 2276.9, 75.9})  // Initialize base class members
     {}
+
+    //Liquid phase CP from: https://webbook.nist.gov/cgi/cbook.cgi?ID=C544854&Units=SI&Mask=2#Thermo-Condensed
+
 
     // Override Tvap method
     void Tvap(double* Tvap, double* Pvap) override {
