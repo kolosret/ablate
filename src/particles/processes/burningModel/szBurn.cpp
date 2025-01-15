@@ -60,54 +60,79 @@ ablate::particles::processes::burningModel::SZBurn::SZBurn(PetscReal convectionC
 
 void ablate::particles::processes::burningModel::SZBurn::ComputeRHS(PetscReal time, accessors::SwarmAccessor &swarmAccessor, accessors::RhsAccessor &rhsAccessor, accessors::EulerianAccessor &eulerianAccessor)
 {
-    auto partDiam2 = swarmAccessor[ablate::particles::ParticleSolver::ParticleDiameter];
-    auto partVel2 = swarmAccessor[ablate::particles::ParticleSolver::ParticleVelocity];
-    auto partDens2 = swarmAccessor[ablate::particles::ParticleSolver::ParticleDensity];
-    auto velocityRhs2 = rhsAccessor[ablate::particles::ParticleSolver::ParticleVelocity];
-
+    //Number of dimensions
+    const auto dim = eulerianAccessor.GetDimensions();
+    
     //Grab wanted fields from the eulerian field accessor
-    //In this case we only need the Oxygen temperature and pressure fields
+    //For the simple burning droplet model, the burnrate is only a function of Tfar, Pfar, YO2far
     auto farFieldTemperature = eulerianAccessor[ablate::finiteVolume::CompressibleFlowFields::TEMPERATURE_FIELD];
     auto farFieldPressure = eulerianAccessor[ablate::finiteVolume::CompressibleFlowFields::PRESSURE_FIELD];
     auto farFieldSpecies = eulerianAccessor[ablate::finiteVolume::CompressibleFlowFields::YI_FIELD];
-    //TODO get the actual O2 mass fractions;
-    double YiO2=1;
-    UpdateFarfield(farFieldTemperature.values[0],farFieldPressure.values[0],YiO2);
-    UpdateFarfield(300,101325,0.5);
+    //Get consevred fields for density for the Reynolds number calculation
+    auto farFieldConserved= eulerianAccessor[ablate::finiteVolume::CompressibleFlowFields::EULER_FIELD];
+    auto farFieldVelocity = eulerianAccessor[ablate::finiteVolume::CompressibleFlowFields::VELOCITY_FIELD]    ;
+
+    //Get the fields(SOL) for which we are creating sources
+    //PS for now it is fine that the inertial is adding source terms for the vel and position
+    //I could do the drag model here to reduce overhead....
+    //PS2 When droplets are analytically integrated forward make sure you don't use inertial
+    auto tempRHS = rhsAccessor[ablate::particles::ParticleSolver::ParticleTemperature];
+    auto massRHS = rhsAccessor[ablate::particles::ParticleSolver::ParticleMass];
 
 
-    //TODO figure this thing out...
-//    //Burning particles
-//    auto tempRHS = rhsAccessor[ablate::particles::ParticleSolver::ParticleTemperature];
-//    //Grab The fields of the particle that we will be changing
-//    auto massRHS = rhsAccessor[ablate::particles::ParticleSolver::ParticleMass];
-//    //Grab the Particle Fields we need
+    //Grab the Particle Fields
 //    auto partDensity = swarmAccessor[ablate::particles::ParticleSolver::ParticleDensity];
-//    auto particlesPerParcel = swarmAccessor[ablate::particles::ParticleSolver::ParticleNPP];
-//    auto partDiameterAvg = swarmAccessor[ablate::particles::ParticleSolver::ParticleDiameter];
-//    auto partBurning = swarmAccessor[ablate::particles::ParticleSolver::ParticleBurning];
-//    auto partTemperature = swarmAccessor[ablate::particles::ParticleSolver::ParticleTemperature];
-//    auto partCp = swarmAccessor[ablate::particles::ParticleSolver::ParticleCP];
-//    auto parcelMass = swarmAccessor[ablate::particles::ParticleSolver::ParticleMass];
-
-
+    auto partVelocity = swarmAccessor[ablate::particles::ParticleSolver::ParticleVelocity];
+    auto particlesPerParcel = swarmAccessor[ablate::particles::ParticleSolver::ParticleNPP];
+    auto partDiameterAvg = swarmAccessor[ablate::particles::ParticleSolver::ParticleDiameter];
+    auto partBurning = swarmAccessor[ablate::particles::ParticleSolver::ParticleBurning];
+    auto partTemperature = swarmAccessor[ablate::particles::ParticleSolver::ParticleTemperature];
+    auto partCp = swarmAccessor[ablate::particles::ParticleSolver::ParticleCP];
+    auto parcelMass = swarmAccessor[ablate::particles::ParticleSolver::ParticleMass];
 
     auto numParticles = swarmAccessor.GetNumberParticles();
     PetscReal SAtot;
     //Calculate Each Particles RHS's
     for( auto np = 0; np < numParticles; np++) {
-        //Ideally this is a farField Value, but for this test case I'm not letting the particles burn until the particle itself reaches
-        // the ignition temperature, Particle may be burning now then when it was updated in the decode call, this will be called twice
-        CalcBurnRate();
-//        double mdot
+        //TODO see if the burning toggle is set elswhere if not set here
+//        if (farFieldSpecies(np,oxygenOffset))
+//            partBurning(np)=1;
+                
+        double YiO2=1;
+        UpdateFarfield(farFieldTemperature(np),farFieldPressure(np),farFieldSpecies(np,oxygenOffset));
+        
+        if (partBurning(np)) {
+            //Calculate the droplet burn rate
+            CalcBurnRate();
+            
+            //Convective effects on the droplet
+            PetscReal slipvelmag = 0;
+            for (PetscInt n = 0; n < dim; n++) {
+                slipvelmag += PetscSqrtReal(farFieldVelocity(np, n) - partVelocity(np, n));
+            }
+            PetscReal reP= farFieldConserved(np,0) * slipvelmag * partDiameterAvg(np) / gasPhase.mug;
+            PetscReal Shg = 2*(1+PetscSqrtReal(reP)*TransportConst.cubeRootSc / 3)* log(1+B)/B;
 
-//        if (partBurning(np))
-//            massRHS(np) -= particlesPerParcel(np)*(partDensity(np)*PETSC_PI/4*partDiameterAvg(np)*burnRate);
-//        //If it's not burning, we are just heating with our shitty convection model
-//        else {
-//            SAtot = particlesPerParcel(np)*PETSC_PI*std::pow(partDiameterAvg(np),2);
-//            tempRHS(np) += convectionCoeff*(farFieldTemperature(np)-partTemperature(np))*SAtot/(parcelMass(np)*partCp(np));
-//            }
+//            //Update burn rate
+//            K = 8 * gasPhase.kg / (gasPhase.Cpg  * liquidFuel->fuelProperties.rhol) * log(1 + B);
+
+            //For a single droplet
+            double mdot = PETSC_PI * partDiameterAvg(np) * gasPhase.kg / gasPhase.Cpg * Shg;
+            //TODO make sure this is just the derivative
+            massRHS(np) -= particlesPerParcel(np) * mdot;
+
+            //For the temperature: (pi*Dd*(mug/Pr)*Nu*(Cp(Tinf-Ts)+hc/rox)-mdotg*hfg)/Cvl/(md)
+            // (mug*Cpg/Pr)=kg
+            // For unity Le, Sc=Pr => Sh=Nu
+            double Nug = Shg;
+            double mD = parcelMass(np)/particlesPerParcel(np);
+            double deltaT = farFieldTemperature(np)-Ts+(flame->Hc/gasPhase.rox)/gasPhase.Cpg;
+            tempRHS(np) += (PETSC_PI*partDiameterAvg(np)*(gasPhase.kg)*Nug*deltaT-mdot*liquidFuel->fuelProperties.Hvap)/liquidFuel->fuelProperties.Cvl/(mD);
+        }
+        else {
+            SAtot = particlesPerParcel(np)*PETSC_PI*std::pow(partDiameterAvg(np),2);
+            tempRHS(np) += convectionCoeff*(farFieldTemperature(np)-partTemperature(np))*SAtot/(parcelMass(np)*partCp(np));
+            }
 
     }
 }
@@ -120,7 +145,7 @@ void ablate::particles::processes::burningModel::SZBurn::ComputeEulerianSource(P
     const auto np = swarmAccessorPreStep.GetNumberParticles();
     //The mass and energy  are in the eulerian field (rhoE is the second index (1), rho is the first index)
     auto sourceEuler = eulerianSourceAccessor[ablate::finiteVolume::CompressibleFlowFields::EULER_FIELD];
-    auto sourceSpecies = eulerianSourceAccessor[ablate::finiteVolume::CompressibleFlowFields::DENSITY_YI_FIELD];
+//    auto sourceSpecies = eulerianSourceAccessor[ablate::finiteVolume::CompressibleFlowFields::DENSITY_YI_FIELD];
 
     //Grab Next and Old Swarm Temperatures (Assume Cp and mass does not change ever)
     auto parcelTempNew = swarmAccessorPostStep[ablate::particles::ParticleSolver::ParticleTemperature];
@@ -148,9 +173,9 @@ void ablate::particles::processes::burningModel::SZBurn::ComputeEulerianSource(P
             sourceEuler(p,ablate::finiteVolume::CompressibleFlowFields::RHO) += mdot;
             // now onto the species mass
             //Now to take care of species terms
-            for (PetscInt ns = 0; ns < numberSpecies; ns ++)
-                sourceSpecies(p,ns) += mdot*(1+properties.nuOx)*properties.massFractionsProducts[ns]; //add the products
-            sourceSpecies(p,oxygenOffset) -= properties.nuOx*mdot; //remove the oxygen
+//            for (PetscInt ns = 0; ns < numberSpecies; ns ++)
+//                sourceSpecies(p,ns) += mdot*(1+properties.nuOx)*properties.massFractionsProducts[ns]; //add the products
+//            sourceSpecies(p,oxygenOffset) -= properties.nuOx*mdot; //remove the oxygen
             //add in the burning energy
             sourceEuler(p,1) -= mdot*properties.HC;
         }
@@ -162,27 +187,40 @@ void ablate::particles::processes::burningModel::SZBurn::ComputeEulerianSource(P
 }
 
 void ablate::particles::processes::burningModel::SZBurn::UpdateFarfield(double Tfar, double Pfar, double YiO2far) {
-    //Update properties
+    //Update farfield properties
     farField.Temperature=Tfar;
     farField.Pressure=Pfar;
     farField.Yox=YiO2far;
 
-    double nN2dnO2=((1-YiO2far)*28)/(YiO2far*32);
-    printf("nN2dnO2 is: %f\n", nN2dnO2);
+    //Sutherland gas transport, Le=1,
+    gasPhase.mug = TransportConst.muo * PetscSqrtReal(Tfar / TransportConst.to) * (Tfar / TransportConst.to) * (TransportConst.to + TransportConst.so) / (Tfar + TransportConst.so);
 
-    //rox = (x+y/4)*(MWO2+3.76*MWN2)/MWF
-    farField.rox = (flame->x+flame->y/4)*(flame->MWO2+nN2dnO2*flame->MWN2)/flame->MWFuel;
-
-    //Gas transport (conductivity)
-    double mug = TransportConst.muo * PetscSqrtReal(Tfar / TransportConst.to) * (Tfar / TransportConst.to) * (TransportConst.to + TransportConst.so) / (Tfar + TransportConst.so);
-
-    //For now, this is not the best...
-    farField.Cpg = liquidFuel->fuelProperties.Cp;
-    //Alternativelly, need to change EOS to zerork
-//    farField.Cpg = eos->mech->getMassCpFromTY();
+    //For now its okay I guess...
+    gasPhase.Cpg = liquidFuel->fuelProperties.Cpg;
+    //Alternativelly, need to change EOS to zerork, 
+    //    gasPhase.Cpg = eos->mech->getMassCpFromTY();
 
     //Conductivity of the gas
-    farField.kg = mug * farField.Cpg  / TransportConst.pr;
+    gasPhase.kg = gasPhase.mug * gasPhase.Cpg  / TransportConst.pr;
+
+    
+    //For if droplet burning update flame properties
+    //TODO pass burning variable in here, to stay consistent with burning criterion
+    if (YiO2far>0.1) {
+        double nN2dnO2 = ((1 - YiO2far) * 28) / (YiO2far * 32);
+//        printf("nN2dnO2 is: %f\n", nN2dnO2);
+
+        //For air: rox = (x+y/4)*(MWO2+3.76*MWN2)/MWF
+        gasPhase.rox = (flame->x + flame->y / 4) * (flame->MWO2 + nN2dnO2 * flame->MWN2) / flame->MWFuel;
+
+        //Flame temperature (For now its constant set at 2700, one can recalculate it for different YO2far
+        gasPhase.Tflame=flame->Tad;
+        gasPhase.nuOx=flame->nuO2;
+        
+    }
+
+
+
 };
 
 void ablate::particles::processes::burningModel::SZBurn::CalcBurnRate() {
@@ -190,8 +228,9 @@ void ablate::particles::processes::burningModel::SZBurn::CalcBurnRate() {
     //Solve the droplet itteration
     double root = BisectionMethodSolve([this](double Y) { return SolveSZBurn(Y); },0.999999,1E-10,1e-10,100);
 
-    //Set burn rate
-    K = result.K;
+    //Set the transfer number
+    B = result.BoxT;
+    Ts = result.Ts;
 }
 
 double ablate::particles::processes::burningModel::SZBurn::SolveSZBurn(double YAsOld) {
@@ -215,8 +254,8 @@ double ablate::particles::processes::burningModel::SZBurn::SolveSZBurn(double YA
 //    double rf_rs = 1 + LHS * gamma1 / gamma2;
 //    double mdot1 = 2 * PETSC_PI * Dp * gamma1 / (1. - 1. /(rf_rs+1E-20)) * log(MdotF_D_Mdot1 / (MdotF_D_Mdot1 - YAsOld));
 
-    double Bm = YAsOld/(1-YAsOld);
-    double mdot = 2.*PETSC_PI*Dp*(farField.kg/farField.Cpg)*log(1+Bm)/Bm;
+    double Bm = (farField.Yox/gasPhase.nuOx + YAsOld)/(1-YAsOld+1E10);
+    double mdot = 2.*PETSC_PI*Dp*(gasPhase.kg/gasPhase.Cpg)*log(1+Bm)/(Bm);
     double Ad = Dp*Dp*PETSC_PI;
     double mFlux = mdot/Ad;
 
@@ -227,16 +266,19 @@ double ablate::particles::processes::burningModel::SZBurn::SolveSZBurn(double YA
     ql = ql* qlLimiter;
 //    ql = 0;
 
+    double BoxT = (farField.Yox * flame->Hc / gasPhase.rox + gasPhase.Cpg  * (farField.Temperature - Tsnew)) / (liquidFuel->fuelProperties.Hvap - ql/mFlux);
 
-    double BoxT = (farField.Yox * flame->Hc / farField.rox + farField.Cpg  * (farField.Temperature - Tsnew)) / (liquidFuel->fuelProperties.Hvap - ql/mFlux);
-
-    double YFs_new = BoxT / (1 + BoxT);
+    double YFs_new = (BoxT - farField.Yox/gasPhase.rox) / (1 + BoxT);
 
     YFs_new = std::min(YFs_new, 1.0);
     YFs_new = std::max(YFs_new, 0.0);
     result.Yfs_new = YFs_new;
 
-    result.K = 8 * farField.kg / (farField.Cpg  * liquidFuel->fuelProperties.rhol) * log(1 + BoxT);
+    //Update transfer number
+    result.BoxT=BoxT;
+
+    //Save surface temperature for Temperature source terms
+    result.Ts=Tsnew;
 
     return YFs_new - YAsOld;
 }
@@ -263,7 +305,7 @@ double ablate::particles::processes::burningModel::SZBurn::SolveSZEvap(double YA
     liquidFuel->Tvap(&Tsnew, &Pvap);
 
     double Bm = YAsOld/(1-YAsOld);
-    double mdot = 2.*PETSC_PI*Dp*(farField.kg/farField.Cpg)*log(1+Bm)/Bm;
+    double mdot = 2.*PETSC_PI*Dp*(gasPhase.kg/gasPhase.Cpg)*log(1+Bm)/Bm;
     double Ad = Dp*Dp*PETSC_PI;
     double mFlux = mdot/Ad;
 
@@ -274,7 +316,7 @@ double ablate::particles::processes::burningModel::SZBurn::SolveSZEvap(double YA
     ql = ql* qlLimiter;
     //    ql = 0;
 
-    double BoxT = (farField.Cpg  * (farField.Temperature - Tsnew)) / (liquidFuel->fuelProperties.Hvap - ql/mFlux);
+    double BoxT = (gasPhase.Cpg  * (farField.Temperature - Tsnew)) / (liquidFuel->fuelProperties.Hvap - ql/mFlux);
 
     double YFs_new = BoxT / (1 + BoxT);
 
@@ -282,7 +324,7 @@ double ablate::particles::processes::burningModel::SZBurn::SolveSZEvap(double YA
     YFs_new = std::max(YFs_new, 0.0);
     result.Yfs_new = YFs_new;
 
-    result.K = 8 * farField.kg / (farField.Cpg  * liquidFuel->fuelProperties.rhol) * log(1 + BoxT);
+    result.K = 8 * gasPhase.kg / (gasPhase.Cpg  * liquidFuel->fuelProperties.rhol) * log(1 + BoxT);
 
     return YFs_new - YAsOld;
 }
@@ -311,8 +353,6 @@ double ablate::particles::processes::burningModel::SZBurn::BisectionMethodSolve(
     std::cerr << "Warning: Maximum number of iterations reached. Approximate root: " << c << std::endl;
     return c;
 }
-
-
 
 #include "registrar.hpp"
 

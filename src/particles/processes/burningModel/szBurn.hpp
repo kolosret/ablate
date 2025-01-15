@@ -21,6 +21,8 @@ class SZBurn : public ablate::particles::processes::BurningProcess
     const PetscReal convectionCoeff; //simple convection heating mode
     PetscReal Td;
     double Dp;
+    double B;
+    double Ts;
 //    const PetscReal YiFuel[];
 
     // the eos used to species the species and compute properties
@@ -37,7 +39,7 @@ class SZBurn : public ablate::particles::processes::BurningProcess
 
 
     double MWair = 28.96;
-    double mDot;
+//    double mDot;
 
     struct Constants{
         const double qlimfac=0.1;
@@ -48,19 +50,21 @@ class SZBurn : public ablate::particles::processes::BurningProcess
         double F;
         double Yfs_new;
         double Ts;
-        double mdot;
         double rstar; //need this for later...
         double Tf;
         double K;
+        double BoxT;
     };
     resultsStruct result;
 
     struct TransportConstStruct{
-        const double pr = 0.707;
-        const double muo = 1.716e-5;
-        const double to = 273.e+0;
-        const double so = 111.e+0;
-        const double sc = 0.707;
+
+        const PetscReal muo = 1.716e-5;
+        const PetscReal to = 273.e+0;
+        const PetscReal so = 111.e+0;
+        const PetscReal sc = 0.707; //needed for diffusivity...
+        const PetscReal cubeRootSc = 0.35339;
+        const PetscReal pr = 0.707;
     };
     TransportConstStruct TransportConst;
 
@@ -74,6 +78,18 @@ class SZBurn : public ablate::particles::processes::BurningProcess
 
     };
     farFieldProp farField;
+
+    struct gasPhaseProp{
+        double nuOx;
+        double Tflame;
+        double Cpg;
+        double kg;
+        double mug;
+        double rox;
+//        double Temperature;
+
+    };
+    gasPhaseProp gasPhase;
 
 
     std::string fuelType;
