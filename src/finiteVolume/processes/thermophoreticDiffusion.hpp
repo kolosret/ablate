@@ -11,10 +11,11 @@ namespace ablate::finiteVolume::processes {
  * Thermophoretic diffusion the transport of ndd (ThermoPheretic) and solid carbon (ThermoPheretic).
  */
 class ThermophoreticDiffusion : public FlowProcess {
-   private:const std::vector<double> CS_Nasa7TLow = {-3.108720720e-01, 4.403536860e-03, 1.903941180e-06, -6.385469660e-09, 2.989642480e-12, -1.086507940e+02, 1.113829530e+00};
-   const std::vector<double> CS_Nasa7THigh = {1.455718290e+00, 1.717022160e-03, -6.975627860e-07, 1.352770320e-10, -9.675906520e-15, -6.951388140e+02, -8.525830330e+00};
+   private:
+   inline static const std::vector<double> CS_Nasa7TLow = {-3.108720720e-01, 4.403536860e-03, 1.903941180e-06, -6.385469660e-09, 2.989642480e-12, -1.086507940e+02, 1.113829530e+00};
+   inline static const std::vector<double> CS_Nasa7THigh = {1.455718290e+00, 1.717022160e-03, -6.975627860e-07, 1.352770320e-10, -9.675906520e-15, -6.951388140e+02, -8.525830330e+00};
 
-    /**
+       /**
      * Store the equation of state to compute pressure
      */
     const std::shared_ptr<eos::transport::TransportModel> transportModel;
@@ -43,6 +44,11 @@ class ThermophoreticDiffusion : public FlowProcess {
                            4900. * (CS_Nasa7THigh.at(1) / 2. + 4900. * (CS_Nasa7THigh.at(2) / 3. + 4900. * (CS_Nasa7THigh.at(3) / 4. + 4900. * CS_Nasa7THigh.at(4) / 5.)));
             return t5000 + (t5000 - t4900) / 100. * (Temp - 5000.);
         }
+    }
+
+    static double ComputeSolidCarbonSensibleEnthalpy(double temperature) {
+        return (ablate::finiteVolume::processes::ThermophoreticDiffusion::CarbonEnthalpy_R_T(temperature) * temperature * 8.314 * 1.0e3 / 12.0107) -
+               (ablate::finiteVolume::processes::ThermophoreticDiffusion::CarbonEnthalpy_R_T(295) * 295 * 8.314 * 1.0e3 / 12.0107);
     }
 
     explicit ThermophoreticDiffusion(std::shared_ptr<eos::transport::TransportModel> transportModel);

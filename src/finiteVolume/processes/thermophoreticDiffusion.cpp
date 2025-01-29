@@ -26,8 +26,8 @@ void ablate::finiteVolume::processes::ThermophoreticDiffusion::Setup(ablate::fin
     viscosityTemperatureFunction = transportModel->GetTransportTemperatureFunction(eos::transport::TransportProperty::Viscosity, flow.GetSubDomain().GetFields());
 
     // Make sure that soot is the first species
-    if (flow.GetSubDomain().GetField(CompressibleFlowFields::DENSITY_YI_FIELD).ComponentIndex(eos::TChemSoot::CSolidName) != 0) {
-        throw std::invalid_argument("ablate::finiteVolume::processes::ThermophoreticDiffusion assumes " + eos::TChemSoot::CSolidName + " is the first species.");
+    if (flow.GetSubDomain().GetField(CompressibleFlowFields::DENSITY_YI_FIELD).ComponentIndex("C(S)") != 0) {
+        throw std::invalid_argument("ablate::finiteVolume::processes::ThermophoreticDiffusion assumes C(S) is the first species.");
     }
 }
 
@@ -52,8 +52,8 @@ PetscErrorCode ablate::finiteVolume::processes::ThermophoreticDiffusion::Thermop
     PetscCall(viscosityFunction->function(field, temperature, &mu, viscosityFunction->context.get()));
 
     // compute the coefficients for carbon and ndd (note that the negatives cancel).  Note that carbon is always assumed to be at the zero index
-    PetscReal coefficient = eos::TChemSoot::ComputeSolidCarbonSensibleEnthalpy(temperature) * field[uOff[DENSITY_YI_FIELD]] * 0.5 * mu / (density * temperature); /*hc*density*Yi*0.5*mu/(rho*T)*/
-
+    PetscReal coefficient = ComputeSolidCarbonSensibleEnthalpy(temperature) * field[uOff[DENSITY_YI_FIELD]] * 0.5 * mu / (density * temperature); /*hc*density*Yi*0.5*mu/(rho*T)*/
+//    ablate::finiteVolume::processes::ThermophoreticDiffusion
     // The current energy flux should be zero at the start
     for (PetscInt d = 0; d < dim; ++d) {
         // flux( (carbonCoefficient +  nddCoefficient) * (- dT/dx - dT/dy - dT/dz) . n A
