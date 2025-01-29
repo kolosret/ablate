@@ -1,6 +1,6 @@
 #include "chemTab.hpp"
 
-#include <eos/tChem.hpp>
+#include <eos/zerork.hpp>
 #include <fstream>
 
 #ifdef WITH_TENSORFLOW

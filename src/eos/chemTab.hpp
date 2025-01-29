@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <istream>
 #include "chemistryModel.hpp"
-#include "eos/tChem.hpp"
+#include "eos/zerork.hpp"
 #ifdef WITH_TENSORFLOW
 #include <tensorflow/c/c_api.h>
 #include "finiteVolume/compressibleFlowFields.hpp"

@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "eos/tChem.hpp"
+#include "eos/zerork.hpp"
 #include "mathFunctions/fieldFunction.hpp"
 
 namespace ablate::monitors {

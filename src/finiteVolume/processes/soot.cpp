@@ -1,6 +1,7 @@
 #include "soot.hpp"
 #include "finiteVolume/compressibleFlowFields.hpp"
 #include "utilities/petscUtilities.hpp"
+#include "utilities/constants.hpp"
 
 ablate::finiteVolume::processes::Soot::Soot(const std::shared_ptr<eos::EOS>& eosIn, const std::shared_ptr<parameters::Parameters>& options, double thresholdTemperature,
                                             double surfaceGrowthPreExponential, double nucleationPreExponential)
@@ -395,7 +396,7 @@ PetscErrorCode ablate::finiteVolume::processes::Soot::SinglePointSootChemistryRH
 
     // compute the temperature source term
     for (std::size_t s = 0; s < TOTAL_ODE_SPECIES; s++) {
-        fArray[ODE_T] += fArray[s] * (pointInfo->speciesSensibleEnthalpyScratch[pointInfo->speciesIndex[s]] + pointInfo->enthalpyOfFormation[s] - RUNIV * 1.0e3 / pointInfo->mw[s]);
+        fArray[ODE_T] += fArray[s] * (pointInfo->speciesSensibleEnthalpyScratch[pointInfo->speciesIndex[s]] + pointInfo->enthalpyOfFormation[s] - ablate::utilities::Constants::rUniv * 1.0e3 / pointInfo->mw[s]);
     }
     fArray[ODE_T] /= -cv;
 

@@ -29,6 +29,11 @@ class Constants {
 
     //! A somewhat large number
     constexpr inline static PetscReal large = 1E10;
+
+    //! Universal gas constant
+    constexpr inline static PetscReal rUniv = 8.314472;
+
+
 };
 }  // namespace ablate::utilities
 

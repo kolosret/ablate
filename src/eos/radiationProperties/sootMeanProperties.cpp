@@ -41,7 +41,7 @@ ablate::eos::ThermodynamicTemperatureFunction ablate::eos::radiationProperties::
     }
 
     /** Get the offsets that locate the position of the solid carbon field. */
-    PetscInt cOffset = (PetscInt)densityYiField->ComponentOffset(TChemSoot::CSolidName);
+    PetscInt cOffset = (PetscInt)densityYiField->ComponentOffset("C(S)");
 
     switch (property) {
         case RadiationProperty::Absorptivity:

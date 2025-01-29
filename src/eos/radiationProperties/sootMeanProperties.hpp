@@ -1,7 +1,7 @@
 #ifndef ABLATELIBRARY_SOOTMEANPROPERTIES_HPP
 #define ABLATELIBRARY_SOOTMEANPROPERTIES_HPP
 
-#include "eos/tChemSoot.hpp"
+//#include "eos/tChemSoot.hpp"
 #include "finiteVolume/compressibleFlowFields.hpp"
 #include "radiation/radiation.hpp"
 #include "radiationProperties.hpp"

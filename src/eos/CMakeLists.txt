@@ -2,30 +2,30 @@ target_sources(ablateLibrary
         PRIVATE
         perfectGas.cpp
         stiffenedGas.cpp
-        tChem.cpp
+#        tChem.cpp
         chemTab.cpp
         chemistryModel.cpp
         twoPhase.cpp
-        tChemSoot.cpp
-        tChemBase.cpp
+#        tChemSoot.cpp
+#        tChemBase.cpp
         zerork.cpp
 
         PUBLIC
         eos.hpp
         perfectGas.hpp
-        tChem.hpp
+#        tChem.hpp
         stiffenedGas.hpp
         chemTab.hpp
         chemistryModel.hpp
         twoPhase.hpp
-        tChemSoot.hpp
-        tChemBase.hpp
+#        tChemSoot.hpp
+#        tChemBase.hpp
         zerork.hpp
         )
 
 add_subdirectory(transport)
-add_subdirectory(tChem)
+#add_subdirectory(tChem)
 add_subdirectory(radiationProperties)
-add_subdirectory(tChemSoot)
+#add_subdirectory(tChemSoot)
 add_subdirectory(chemTab)
 add_subdirectory(zerork)

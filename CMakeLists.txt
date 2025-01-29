@@ -59,8 +59,8 @@ target_link_libraries(ablateLibrary
         yaml-cpp
         muparser
         CHREST::xdmfGeneratorLibrary
-        TChem::tchem
-        Tines::tines
+#        TChem::tchem
+#        Tines::tines
         Threads::Threads
         nlohmann_json::nlohmann_json
         ${HDF5_LIBRARIES}

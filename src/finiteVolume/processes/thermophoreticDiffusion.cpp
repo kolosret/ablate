@@ -1,5 +1,5 @@
 #include "thermophoreticDiffusion.hpp"
-#include "eos/tChemSoot.hpp"
+//#include "eos/tChemSoot.hpp"
 #include "finiteVolume/compressibleFlowFields.hpp"
 #include "utilities/constants.hpp"
 #include "utilities/mathUtilities.hpp"
@@ -63,6 +63,8 @@ PetscErrorCode ablate::finiteVolume::processes::ThermophoreticDiffusion::Thermop
 
     PetscFunctionReturn(0);
 }
+
+
 
 PetscErrorCode ablate::finiteVolume::processes::ThermophoreticDiffusion::ThermophoreticDiffusionVariableFlux(PetscInt dim, const PetscFVFaceGeom *fg, const PetscInt uOff[], const PetscInt uOff_x[],
                                                                                                              const PetscScalar field[], const PetscScalar grad[], const PetscInt aOff[],

@@ -1,7 +1,7 @@
 #ifndef ABLATELIBRARY_SOOT_HPP
 #define ABLATELIBRARY_SOOT_HPP
 
-#include "eos/tChem.hpp"
+#include "eos/zerork.hpp"
 #include "process.hpp"
 #include "utilities/constants.hpp"
 
