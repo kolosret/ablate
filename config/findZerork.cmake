@@ -87,7 +87,7 @@ elseif (DEFINED ENV{ZERORK_DIR})
 
     else()
 
-        message(STATUS "Found ZERORK_DIR, using prebuilt zerork")
+        message(STATUS "Found ZERORK_DIR, using prebuilt zerork with gpu")
 
         add_library(zerork_cfd_plugin_gpu INTERFACE IMPORTED GLOBAL)
         target_include_directories(zerork_cfd_plugin_gpu INTERFACE "$ENV{ZERORK_DIR}/include")
