@@ -75,13 +75,25 @@ if (NOT (DEFINED ENV{ZERORK_DIR}))
     endif ()
 
 elseif (DEFINED ENV{ZERORK_DIR})
-    message(STATUS "Found ZERORK_DIR, using prebuilt zerork")
 
-    add_library(zerork_cfd_plugin INTERFACE IMPORTED GLOBAL)
-    target_include_directories(zerork_cfd_plugin INTERFACE "$ENV{ZERORK_DIR}/include")
-    target_link_libraries(zerork_cfd_plugin INTERFACE "$ENV{ZERORK_DIR}/lib/libzerork_cfd_plugin.so")
+    if (NOT (DEFINED ENV{ABLATE_GPU}))
+        message(STATUS "Found ZERORK_DIR, using prebuilt zerork")
 
-    add_library(ZERORK::zerork_cfd_plugin ALIAS zerork_cfd_plugin)
+        add_library(zerork_cfd_plugin INTERFACE IMPORTED GLOBAL)
+        target_include_directories(zerork_cfd_plugin INTERFACE "$ENV{ZERORK_DIR}/include")
+        target_link_libraries(zerork_cfd_plugin INTERFACE "$ENV{ZERORK_DIR}/lib/libzerork_cfd_plugin.so")
 
+        add_library(ZERORK::zerork_cfd_plugin ALIAS zerork_cfd_plugin)
+
+    else()
+
+        message(STATUS "Found ZERORK_DIR, using prebuilt zerork")
+
+        add_library(zerork_cfd_plugin_gpu INTERFACE IMPORTED GLOBAL)
+        target_include_directories(zerork_cfd_plugin_gpu INTERFACE "$ENV{ZERORK_DIR}/include")
+        target_link_libraries(zerork_cfd_plugin_gpu INTERFACE "$ENV{ZERORK_DIR}/lib/libzerork_cfd_plugin_gpu.so")
+
+        add_library(ZERORK::zerork_cfd_plugin ALIAS zerork_cfd_plugin_gpu)
+    endif()
 endif ()
 
