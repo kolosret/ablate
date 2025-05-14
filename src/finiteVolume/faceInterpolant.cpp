@@ -262,12 +262,16 @@ void ablate::finiteVolume::FaceInterpolant::RestoreInterpolatedFaceVectors(Vec, 
 void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXVec, Vec locAuxVec, Vec locFVec, const std::shared_ptr<domain::Region>& solverRegion,
                                                        std::vector<FaceInterpolant::ContinuousFluxFunctionDescription>& rhsFunctions, const ablate::domain::Range& faceRange, Vec cellGeomVec,
                                                        Vec faceGeomVec) {
+    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Interpolation");
     // get the dm
     auto dm = subDomain->GetDM();
 
     // interpolate to the faces
     Vec faceSolutionVec, faceAuxVec, faceSolutionGradVec, faceAuxGradVec;
     GetInterpolatedFaceVectors(locXVec, locAuxVec, faceSolutionVec, faceAuxVec, faceSolutionGradVec, faceAuxGradVec);
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Setup");
+
 
     // check for ghost cells
     DMLabel ghostLabel;
@@ -351,9 +355,12 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
             }
         }
     }
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Fluxcalc");
     // march over each face
     for (PetscInt f = faceRange.start; f < faceRange.end; f++) {
+//        StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Face1");
+
         PetscInt face = faceRange.points ? faceRange.points[f] : f;
 
         // make sure that this is a valid face
@@ -385,9 +392,11 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
 
         PetscFVFaceGeom* fg;
         DMPlexPointLocalRead(faceDM, face, faceGeomArray, &fg);
+//        EndEvent();
 
         // March over each source function
         for (std::size_t fun = 0; fun < rhsFunctions.size(); fun++) {
+//            StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::diffusion");
             PetscArrayzero(flux.data(), totDim) >> utilities::PetscUtilities::checkError;
             PetscInt fluxOffset = 0;  // Flux offset for the function ( Currently calculated by just adding the number of components of the previous fields)
             const auto& rhsFluxFunctionDescription = rhsFunctions[fun];
@@ -404,6 +413,8 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
                                                 flux.data(),
                                                 rhsFluxFunctionDescription.context) >>
                 utilities::PetscUtilities::checkError;
+//            EndEvent();
+//            StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Addflux");
             for (std::size_t updateFieldIdx = 0; updateFieldIdx < rhsFunctions[fun].updateFields.size(); updateFieldIdx++) {
                 // add the flux back to the cell
                 PetscScalar *fL = nullptr, *fR = nullptr;
@@ -431,9 +442,11 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
                 }
                 fluxOffset += fluxComponentSize[fun][updateFieldIdx];
             }
+//            EndEvent();
         }
     }
-
+    EndEvent();
+    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Cleanup");
     VecRestoreArrayRead(faceSolutionVec, &faceSolutionArray);
     VecRestoreArrayRead(faceSolutionGradVec, &faceSolutionGradArray);
 
@@ -445,4 +458,5 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
     VecRestoreArrayRead(cellGeomVec, &cellGeomArray) >> utilities::PetscUtilities::checkError;
     VecRestoreArrayRead(faceGeomVec, &faceGeomArray) >> utilities::PetscUtilities::checkError;
     RestoreInterpolatedFaceVectors(locXVec, locAuxVec, faceSolutionVec, faceAuxVec, faceSolutionGradVec, faceAuxGradVec);
+    EndEvent();
 }

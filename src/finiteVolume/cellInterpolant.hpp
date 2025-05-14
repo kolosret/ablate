@@ -6,6 +6,10 @@
 #include "domain/range.hpp"
 #include "domain/region.hpp"
 #include "domain/subDomain.hpp"
+#include "/p/lustre2/kolosret/papi/src/install/include/papi.h"
+#include <sys/time.h>
+#include <sys/resource.h>
+
 namespace ablate::finiteVolume {
 
 class CellInterpolant : private utilities::Loggable<CellInterpolant> {
@@ -42,7 +46,14 @@ class CellInterpolant : private utilities::Loggable<CellInterpolant> {
         std::vector<PetscInt> inputFields;
         std::vector<PetscInt> auxFields;
     };
+    void handle_error (int retval)
+    {
+        printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
+        exit(1);
+    }
 
+    double totalTime=0.0;
+    int callCount=0;
    private:
     //! use the subDomain to setup the problem
     std::shared_ptr<ablate::domain::SubDomain> subDomain;
@@ -125,6 +136,35 @@ class CellInterpolant : private utilities::Loggable<CellInterpolant> {
                     const ablate::domain::Range& cellRange, Vec cellGeomVec);
 };
 
+
+
+//void get_memory_usage() {
+//    struct rusage usage;
+//    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+//        printf("Max resident set size: %ld KB\n", usage.ru_maxrss);
+//    } else {
+//        perror("getrusage failed");
+//    }
+//}
+
 }  // namespace ablate::finiteVolume
+
+
+//    void get_memory_usage() {
+//        FILE *file = fopen("/proc/self/statm", "r");
+//        if (file == NULL) {
+//            perror("Error opening /proc/self/statm");
+//            return;
+//        }
+//
+//        long pages;
+//        if (fscanf(file, "%ld", &pages) == 1) {
+//            long page_size = sysconf(_SC_PAGESIZE); // Get page size in bytes
+//            printf("Memory usage: %ld KB\n", (pages * page_size) / 1024);
+//        }
+//
+//        fclose(file);
+//    }
+
 
 #endif  // ABLATELIBRARY_CELLINTERPOLANT_HPP

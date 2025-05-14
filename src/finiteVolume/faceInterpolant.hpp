@@ -8,7 +8,7 @@
 
 namespace ablate::finiteVolume {
 
-class FaceInterpolant {
+class FaceInterpolant : private utilities::Loggable<FaceInterpolant>{
    private:
     //! use the subDomain to setup the problem
     std::shared_ptr<ablate::domain::SubDomain> subDomain;

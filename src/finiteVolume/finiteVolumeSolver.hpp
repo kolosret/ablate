@@ -13,7 +13,11 @@
 #include "solver/timeStepper.hpp"
 #include "utilities/constants.hpp"
 #include "utilities/vectorUtilities.hpp"
-
+#include "/p/lustre2/kolosret/papi/src/install/include/papi.h"
+#include <sys/time.h>
+//#include <stdlib.h>
+//#include <stdio.h>
+#include <sys/resource.h>
 namespace ablate::finiteVolume {
 
 // forward declare the FlowProcesses

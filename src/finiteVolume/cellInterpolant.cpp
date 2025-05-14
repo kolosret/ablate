@@ -622,7 +622,9 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
             PetscInt fluxOffset = 0;  // Flux offset for the function ( Currently calculated by just adding the number of components of the previous fields)
             PetscArrayzero(flux, totDim) >> utilities::PetscUtilities::checkError;
             const auto& rhsFluxFunctionDescription = rhsFunctions[fun];
+//            StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::Ausmup");
             rhsFluxFunctionDescription.function(dim, fg, uOff[fun].data(), uL, uR, aOff[fun].data(), auxL, auxR, flux, rhsFluxFunctionDescription.context) >> utilities::PetscUtilities::checkError;
+//            EndEvent();
             // add the fluxes back to the cell
             for (std::size_t updateFieldIdx = 0; updateFieldIdx < rhsFunctions[fun].updateFields.size(); updateFieldIdx++) {
                 PetscInt cellLabelValue = regionValue;
@@ -917,7 +919,24 @@ PetscErrorCode ablate::finiteVolume::CellInterpolant::ComputeGradientFVM(DM dm, 
 void ablate::finiteVolume::CellInterpolant::ProjectToFace(const std::vector<domain::Field>& fields, PetscDS ds, const PetscFVFaceGeom& faceGeom, PetscInt cellId, const PetscFVCellGeom& cellGeom,
                                                           DM dm, const PetscScalar* xArray, const std::vector<DM>& dmGrads, const std::vector<const PetscScalar*>& gradArrays, PetscScalar* u,
                                                           PetscScalar* grad, bool projectField) {
-    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ProjectToFace");
+//    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ProjectToFace");
+
+        //Timing
+        double start = MPI_Wtime();
+
+
+            //Papi low level
+//        int EventSet = PAPI_NULL;
+//        long long values[1];
+//        PAPI_create_eventset(&EventSet);
+//        PAPI_add_event(EventSet, PAPI_DP_OPS);
+//        PAPI_start(EventSet);
+
+
+        //PAPI high level
+//        int retval;
+//        retval = PAPI_hl_region_begin("project");
+
     const auto dim = subDomain->GetDimensions();
     // [R: 1] — Read subDomain
 
@@ -936,15 +955,16 @@ void ablate::finiteVolume::CellInterpolant::ProjectToFace(const std::vector<doma
         PetscScalar* xCell;
         PetscScalar* gradCell;
 
+
         // Get the field values at this cell
         DMPlexPointLocalFieldRead(dm, cellId, field.subId, xArray, &xCell) >> utilities::PetscUtilities::checkError;
         // [R: 3], [W: 1]
 
         // If we need to project the field
         if (projectField && dmGrads[field.subId]) {
-            // [R: 2] — 2 statement variables
+            // [R: 2] — 2 statement variables // Dont count
             DMPlexPointLocalRead(dmGrads[field.subId], cellId, gradArrays[field.subId], &gradCell) >> utilities::PetscUtilities::checkError;
-            // [R: 3], [W: 1]
+            // [R: 3], [W: 1] //No write ..
             DMPlex_WaxpyD_Internal(dim, -1, cellGeom.centroid, faceGeom.centroid, dx);
             // [R: 2D, W: D] — Read centroids (2 × D), write dx (D)
 
@@ -991,5 +1011,40 @@ void ablate::finiteVolume::CellInterpolant::ProjectToFace(const std::vector<doma
             }
         }
     }
-    EndEvent();
+
+
+    //PAPI high level
+//        retval = PAPI_hl_region_end("project");
+//        if ( retval != PAPI_OK ){
+//            handle_error(retval);
+//        }
+
+
+        //Timing function
+            totalTime += MPI_Wtime() - start;
+            ++callCount;
+            PetscPrintf(PETSC_COMM_WORLD, "StaticFunction called %d times, total time: %f s\n", callCount, totalTime);
+
+
+
+
+
+        //    PAPI low level
+        //        PAPI_stop(EventSet, values);
+        //        printf("FLOPs counted: %lld\n", values[0]);
+        //    if (PAPI_query_event(PAPI_DP_OPS) != PAPI_OK) {
+        //        fprintf(stderr, "PAPI_FP_OPS not supported on this architecture\n");
+        //        exit(1);
+        //    }
+        //    // Clean up
+        //    PAPI_cleanup_eventset(EventSet);
+        //    PAPI_destroy_eventset(&EventSet);
+
+
+
+
+
+//    EndEvent();
+
+
 }

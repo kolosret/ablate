@@ -8,10 +8,11 @@ namespace ablate::finiteVolume::fluxCalculator {
 /**
  * A sequel to AUSM, Part II: AUSM+-up for all speeds
  */
-class AusmpUp : public fluxCalculator::FluxCalculator {
+class AusmpUp : public fluxCalculator::FluxCalculator,private utilities::Loggable<AusmpUp> {
    private:
     // AusmUp uses a pgs if provided
     const std::shared_ptr<ablate::finiteVolume::processes::PressureGradientScaling> pgs;
+
 
     static Direction AusmpUpFunction(void*, PetscReal uL, PetscReal aL, PetscReal rhoL, PetscReal pL, PetscReal uR, PetscReal aR, PetscReal rhoR, PetscReal pR, PetscReal* massFlux, PetscReal* p12);
 
@@ -24,10 +25,17 @@ class AusmpUp : public fluxCalculator::FluxCalculator {
     const inline static PetscReal Ku = 0.75;
     const inline static PetscReal sigma = 0.25;
 
+
+
+
     // The reference infinity mach number
     const double mInf;
 
    public:
+    static double totalTime;
+    static int callCount;
+
+
     explicit AusmpUp(double mInf, std::shared_ptr<ablate::finiteVolume::processes::PressureGradientScaling> = {});
     AusmpUp(AusmpUp const&) = delete;
     AusmpUp& operator=(AusmpUp const&) = delete;

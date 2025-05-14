@@ -163,16 +163,15 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
                                                                                                      const PetscScalar* fieldR, const PetscInt* aOff, const PetscScalar* auxL, const PetscScalar* auxR,
                                                                                                      PetscScalar* flux, void* ctx) {
     PetscFunctionBeginUser;
+    auto advectionData = (AdvectionData*)ctx; // 1 read, 1 write
 
-    auto advectionData = (AdvectionData*)ctx;
-
-    const int EULER_FIELD = 0;
-    const int RHOYI_FIELD = 1;
+    const int EULER_FIELD = 0; // 1 write
+    const int RHOYI_FIELD = 1; // 1 write
 
     // Compute the norm
     PetscReal norm[3];
-    utilities::MathUtilities::NormVector(dim, fg->normal, norm);
-    const PetscReal areaMag = utilities::MathUtilities::MagVector(dim, fg->normal);
+    utilities::MathUtilities::NormVector(dim, fg->normal, norm); // D reads (fg->normal), D writes (norm)
+    const PetscReal areaMag = utilities::MathUtilities::MagVector(dim, fg->normal); // 3*D + 1 reads , D writes
 
     // Decode the left and right states
     PetscReal densityL;
@@ -184,16 +183,18 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
 
     // decode the left side
     {
-        densityL = fieldL[uOff[EULER_FIELD] + CompressibleFlowFields::RHO];
+        densityL = fieldL[uOff[EULER_FIELD] + CompressibleFlowFields::RHO]; // 2 reads, 1 write
         PetscReal temperatureL;
 
         PetscCall(advectionData->computeTemperature.function(fieldL, auxL[aOff[0]] * .67 + .33 * auxR[aOff[0]], &temperatureL, advectionData->computeTemperature.context.get()));
+        // State evaluation: Temperature, Energy, a, P
+
 
         // Get the velocity in this direction
-        normalVelocityL = 0.0;
-        for (PetscInt d = 0; d < dim; d++) {
-            velocityL[d] = fieldL[uOff[EULER_FIELD] + CompressibleFlowFields::RHOU + d] / densityL;
-            normalVelocityL += velocityL[d] * norm[d];
+        normalVelocityL = 0.0; // 0 reads, 1 write
+        for (PetscInt d = 0; d < dim; d++) { // 1 reads, 1 write
+            velocityL[d] = fieldL[uOff[EULER_FIELD] + CompressibleFlowFields::RHOU + d] / densityL; // 3 reads, 1 write
+            normalVelocityL += velocityL[d] * norm[d];  // 2 reads, 1 write
         }
         PetscCall(advectionData->computeInternalEnergy.function(fieldL, temperatureL, &internalEnergyL, advectionData->computeInternalEnergy.context.get()));
         PetscCall(advectionData->computeSpeedOfSound.function(fieldL, temperatureL, &aL, advectionData->computeSpeedOfSound.context.get()));
@@ -207,6 +208,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
     PetscReal aR;
     PetscReal pR;
 
+    //In terms of memory same as left
     {  // decode right state
         densityR = fieldR[uOff[EULER_FIELD] + CompressibleFlowFields::RHO];
         PetscReal temperatureR;
@@ -233,14 +235,16 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
         advectionData->fluxCalculatorFunction(advectionData->fluxCalculatorCtx, normalVelocityL, aL, densityL, pL, normalVelocityR, aR, densityR, pR, &massFlux, &p12);
 
     if (direction == fluxCalculator::LEFT) {
-        flux[CompressibleFlowFields::RHO] = massFlux * areaMag;
-        PetscReal velMagL = utilities::MathUtilities::MagVector(dim, velocityL);
-        PetscReal HL = internalEnergyL + velMagL * velMagL / 2.0 + pL / densityL;
-        flux[CompressibleFlowFields::RHOE] = HL * massFlux * areaMag;
-        for (PetscInt n = 0; n < dim; n++) {
-            flux[CompressibleFlowFields::RHOU + n] = velocityL[n] * massFlux * areaMag + p12 * fg->normal[n];
+        flux[CompressibleFlowFields::RHO] = massFlux * areaMag; // 3 reads, 1 write
+        PetscReal velMagL = utilities::MathUtilities::MagVector(dim, velocityL); // 3*D + 1 reads , D writes
+        PetscReal HL = internalEnergyL + velMagL * velMagL / 2.0 + pL / densityL; // 5 reads, 1 write
+        flux[CompressibleFlowFields::RHOE] = HL * massFlux * areaMag; // 4 reads, 1 write
+        for (PetscInt n = 0; n < dim; n++) { // 1 reads, 1 write
+            flux[CompressibleFlowFields::RHOU + n] = velocityL[n] * massFlux * areaMag + p12 * fg->normal[n]; // 7 reads, 1 write
         }
-        for (PetscInt ns = 0; ns < advectionData->numberSpecies; ns++) flux[uOff[RHOYI_FIELD] + ns] = massFlux * fieldL[uOff[RHOYI_FIELD] + ns] / densityL * areaMag;
+        for (PetscInt ns = 0; ns < advectionData->numberSpecies; ns++) { // 1 reads, 1 write
+            flux[uOff[RHOYI_FIELD] + ns] = massFlux * fieldL[uOff[RHOYI_FIELD] + ns] / densityL * areaMag; // 7 reads, 1 write
+        }
     } else if (direction == fluxCalculator::RIGHT) {
         flux[CompressibleFlowFields::RHO] = massFlux * areaMag;
         PetscReal velMagR = utilities::MathUtilities::MagVector(dim, velocityR);
@@ -269,6 +273,119 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
 
     PetscFunctionReturn(0);
 }
+
+
+
+
+//PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::AdvectionFlux(PetscInt dim, const PetscFVFaceGeom* fg, const PetscInt* uOff, const PetscScalar* fieldL,
+//                                                                                                     const PetscScalar* fieldR, const PetscInt* aOff, const PetscScalar* auxL, const PetscScalar* auxR,
+//                                                                                                     PetscScalar* flux, void* ctx) {
+//    PetscFunctionBeginUser;
+//    auto advectionData = (AdvectionData*)ctx;
+//
+//    const int EULER_FIELD = 0;
+//    const int RHOYI_FIELD = 1;
+//
+//    // Compute the norm
+//    PetscReal norm[3];
+//    utilities::MathUtilities::NormVector(dim, fg->normal, norm);
+//    const PetscReal areaMag = utilities::MathUtilities::MagVector(dim, fg->normal);
+//
+//    // Decode the left and right states
+//    PetscReal densityL;
+//    PetscReal normalVelocityL;
+//    PetscReal velocityL[3];
+//    PetscReal internalEnergyL;
+//    PetscReal aL;
+//    PetscReal pL;
+//
+//    // decode the left side
+//    {
+//        densityL = fieldL[uOff[EULER_FIELD] + CompressibleFlowFields::RHO];
+//        PetscReal temperatureL;
+//
+//        PetscCall(advectionData->computeTemperature.function(fieldL, auxL[aOff[0]] * .67 + .33 * auxR[aOff[0]], &temperatureL, advectionData->computeTemperature.context.get()));
+//
+//        // Get the velocity in this direction
+//        normalVelocityL = 0.0;
+//        for (PetscInt d = 0; d < dim; d++) {
+//            velocityL[d] = fieldL[uOff[EULER_FIELD] + CompressibleFlowFields::RHOU + d] / densityL;
+//            normalVelocityL += velocityL[d] * norm[d];
+//        }
+//        PetscCall(advectionData->computeInternalEnergy.function(fieldL, temperatureL, &internalEnergyL, advectionData->computeInternalEnergy.context.get()));
+//        PetscCall(advectionData->computeSpeedOfSound.function(fieldL, temperatureL, &aL, advectionData->computeSpeedOfSound.context.get()));
+//        PetscCall(advectionData->computePressure.function(fieldL, temperatureL, &pL, advectionData->computePressure.context.get()));
+//    }
+//
+//    PetscReal densityR;
+//    PetscReal normalVelocityR;
+//    PetscReal velocityR[3];
+//    PetscReal internalEnergyR;
+//    PetscReal aR;
+//    PetscReal pR;
+//
+//    {  // decode right state
+//        densityR = fieldR[uOff[EULER_FIELD] + CompressibleFlowFields::RHO];
+//        PetscReal temperatureR;
+//
+//        PetscCall(advectionData->computeTemperature.function(fieldR, auxR[aOff[0]] * .67 + .33 * auxL[aOff[0]], &temperatureR, advectionData->computeTemperature.context.get()));
+//
+//        // Get the velocity in this direction
+//        normalVelocityR = 0.0;
+//        for (PetscInt d = 0; d < dim; d++) {
+//            velocityR[d] = fieldR[uOff[EULER_FIELD] + CompressibleFlowFields::RHOU + d] / densityR;
+//            normalVelocityR += velocityR[d] * norm[d];
+//        }
+//
+//        PetscCall(advectionData->computeInternalEnergy.function(fieldR, temperatureR, &internalEnergyR, advectionData->computeInternalEnergy.context.get()));
+//        PetscCall(advectionData->computeSpeedOfSound.function(fieldR, temperatureR, &aR, advectionData->computeSpeedOfSound.context.get()));
+//        PetscCall(advectionData->computePressure.function(fieldR, temperatureR, &pR, advectionData->computePressure.context.get()));
+//    }
+//
+//    // get the face values
+//    PetscReal massFlux;
+//    PetscReal p12;
+//
+//    fluxCalculator::Direction direction =
+//        advectionData->fluxCalculatorFunction(advectionData->fluxCalculatorCtx, normalVelocityL, aL, densityL, pL, normalVelocityR, aR, densityR, pR, &massFlux, &p12);
+//
+//    if (direction == fluxCalculator::LEFT) {
+//        flux[CompressibleFlowFields::RHO] = massFlux * areaMag;
+//        PetscReal velMagL = utilities::MathUtilities::MagVector(dim, velocityL);
+//        PetscReal HL = internalEnergyL + velMagL * velMagL / 2.0 + pL / densityL;
+//        flux[CompressibleFlowFields::RHOE] = HL * massFlux * areaMag;
+//        for (PetscInt n = 0; n < dim; n++) {
+//            flux[CompressibleFlowFields::RHOU + n] = velocityL[n] * massFlux * areaMag + p12 * fg->normal[n];
+//        }
+//        for (PetscInt ns = 0; ns < advectionData->numberSpecies; ns++) flux[uOff[RHOYI_FIELD] + ns] = massFlux * fieldL[uOff[RHOYI_FIELD] + ns] / densityL * areaMag;
+//    } else if (direction == fluxCalculator::RIGHT) {
+//        flux[CompressibleFlowFields::RHO] = massFlux * areaMag;
+//        PetscReal velMagR = utilities::MathUtilities::MagVector(dim, velocityR);
+//        PetscReal HR = internalEnergyR + velMagR * velMagR / 2.0 + pR / densityR;
+//        flux[CompressibleFlowFields::RHOE] = HR * massFlux * areaMag;
+//        for (PetscInt n = 0; n < dim; n++) {
+//            flux[CompressibleFlowFields::RHOU + n] = velocityR[n] * massFlux * areaMag + p12 * fg->normal[n];
+//        }
+//        for (PetscInt ns = 0; ns < advectionData->numberSpecies; ns++) flux[uOff[RHOYI_FIELD] + ns] = massFlux * fieldR[uOff[RHOYI_FIELD] + ns] / densityR * areaMag;
+//    } else {
+//        flux[CompressibleFlowFields::RHO] = massFlux * areaMag;
+//
+//        PetscReal velMagL = utilities::MathUtilities::MagVector(dim, velocityL);
+//        PetscReal HL = internalEnergyL + velMagL * velMagL / 2.0 + pL / densityL;
+//
+//        PetscReal velMagR = utilities::MathUtilities::MagVector(dim, velocityR);
+//        PetscReal HR = internalEnergyR + velMagR * velMagR / 2.0 + pR / densityR;
+//
+//        flux[CompressibleFlowFields::RHOE] = 0.5 * (HL + HR) * massFlux * areaMag;
+//        for (PetscInt n = 0; n < dim; n++) {
+//            flux[CompressibleFlowFields::RHOU + n] = 0.5 * (velocityL[n] + velocityR[n]) * massFlux * areaMag + p12 * fg->normal[n];
+//        }
+//        for (PetscInt ns = 0; ns < advectionData->numberSpecies; ns++)
+//            flux[uOff[RHOYI_FIELD] + ns] = massFlux * 0.5 * (fieldR[uOff[RHOYI_FIELD] + ns] + fieldL[uOff[RHOYI_FIELD] + ns]) / (0.5 * (densityL + densityR)) * areaMag;
+//    }
+//
+//    PetscFunctionReturn(0);
+//}
 
 double ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::ComputeCflTimeStep(TS ts, ablate::finiteVolume::FiniteVolumeSolver& flow, void* ctx) {
     // Get the dm and current solution vector

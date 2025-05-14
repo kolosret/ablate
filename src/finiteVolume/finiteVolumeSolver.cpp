@@ -235,6 +235,9 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
     ablate::domain::Range faceRange, cellRange;
     GetFaceRange(faceRange);
     GetCellRange(cellRange);
+
+    PAPI_library_init(PAPI_VER_CURRENT);
+
     try {
         StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunction");
         if (!discontinuousFluxFunctionDescriptions.empty()) {
@@ -248,6 +251,7 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
     } catch (std::exception& exception) {
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in CellInterpolant discontinuousFluxFunction: %s", exception.what());
     }
+
 
     try {
         StartEvent("FiniteVolumeSolver::ComputeRHSFunction::pointFunction");
