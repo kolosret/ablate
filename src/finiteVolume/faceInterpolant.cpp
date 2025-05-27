@@ -270,7 +270,7 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
     Vec faceSolutionVec, faceAuxVec, faceSolutionGradVec, faceAuxGradVec;
     GetInterpolatedFaceVectors(locXVec, locAuxVec, faceSolutionVec, faceAuxVec, faceSolutionGradVec, faceAuxGradVec);
     EndEvent();
-    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Setup");
+//    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Setup");
 
 
     // check for ghost cells
@@ -355,7 +355,7 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
             }
         }
     }
-    EndEvent();
+//    EndEvent();
     StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Fluxcalc");
     // march over each face
     for (PetscInt f = faceRange.start; f < faceRange.end; f++) {

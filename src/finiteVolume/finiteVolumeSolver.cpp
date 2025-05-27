@@ -239,12 +239,12 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
     PAPI_library_init(PAPI_VER_CURRENT);
 
     try {
+//        MPI_Barrier(PETSC_COMM_WORLD);
         StartEvent("FiniteVolumeSolver::ComputeRHSFunction::discontinuousFluxFunction");
         if (!discontinuousFluxFunctionDescriptions.empty()) {
             if (cellInterpolant == nullptr) {
                 cellInterpolant = std::make_unique<CellInterpolant>(subDomain, GetRegion(), faceGeomVec, cellGeomVec, maxlimit);
             }
-
             cellInterpolant->ComputeRHS(time, locXVec, subDomain->GetAuxVector(), locFVec, GetRegion(), discontinuousFluxFunctionDescriptions, faceRange, cellRange, cellGeomVec, faceGeomVec);
         }
         EndEvent();

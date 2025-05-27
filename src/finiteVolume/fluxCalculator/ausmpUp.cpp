@@ -3,11 +3,7 @@
 double ablate::finiteVolume::fluxCalculator::AusmpUp::totalTime = 0.0;
 int ablate::finiteVolume::fluxCalculator::AusmpUp::callCount = 0;
 
-ablate::finiteVolume::fluxCalculator::AusmpUp::AusmpUp(double mInf, std::shared_ptr<ablate::finiteVolume::processes::PressureGradientScaling> pgs) : pgs(pgs), mInf(mInf) {
-
-
-
-}
+ablate::finiteVolume::fluxCalculator::AusmpUp::AusmpUp(double mInf, std::shared_ptr<ablate::finiteVolume::processes::PressureGradientScaling> pgs) : pgs(pgs), mInf(mInf) {}
 
 //ablate::finiteVolume::fluxCalculator::Direction ablate::finiteVolume::fluxCalculator::AusmpUp::AusmpUpFunction(void* ctx, PetscReal uL, PetscReal aL, PetscReal rhoL, PetscReal pL, PetscReal uR,
 //                                                                                                                PetscReal aR, PetscReal rhoR, PetscReal pR, PetscReal* massFlux, PetscReal* p12) {
@@ -68,8 +64,8 @@ ablate::finiteVolume::fluxCalculator::Direction ablate::finiteVolume::fluxCalcul
 
 
     //PAPI high level
-        int retval;
-        retval = PAPI_hl_region_begin("ausmup");
+//        int retval;
+//        retval = PAPI_hl_region_begin("ausmup");
 
 //        //PAPI low level
 //        int EventSet = PAPI_NULL;
@@ -147,18 +143,20 @@ ablate::finiteVolume::fluxCalculator::Direction ablate::finiteVolume::fluxCalcul
 
 
     //PAPI high level
-    retval = PAPI_hl_region_end("ausmup");
-    if ( retval != PAPI_OK ){
-        std::cout << "abc" << std::endl;
-    }
+//    retval = PAPI_hl_region_end("ausmup");
+//    if ( retval != PAPI_OK ){
+//        std::cout << "abc" << std::endl;
+//    }
 
 
 
     //Timing function
 //    totalTime += MPI_Wtime() - start;
 //    ++callCount;
-//    PetscPrintf(PETSC_COMM_WORLD, "StaticFunction called %d times, total time: %f s\n", ablate::finiteVolume::fluxCalculator::AusmpUp::callCount, ablate::finiteVolume::fluxCalculator::AusmpUp::totalTime);
-
+//    if (callCount % 10000 == 0) {
+//        PetscPrintf(
+//            PETSC_COMM_WORLD, "StaticFunction called %d times, total time: %f s\n", ablate::finiteVolume::fluxCalculator::AusmpUp::callCount, ablate::finiteVolume::fluxCalculator::AusmpUp::totalTime);
+//    }
     return direction;  // 1 read
 }
 
