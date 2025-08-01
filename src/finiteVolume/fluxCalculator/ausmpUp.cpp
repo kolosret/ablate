@@ -153,7 +153,7 @@ ablate::finiteVolume::fluxCalculator::Direction ablate::finiteVolume::fluxCalcul
     //Timing function
 //    totalTime += MPI_Wtime() - start;
 //    ++callCount;
-//    if (callCount % 10000 == 0) {
+//    if (callCount == 100000) {
 //        PetscPrintf(
 //            PETSC_COMM_WORLD, "StaticFunction called %d times, total time: %f s\n", ablate::finiteVolume::fluxCalculator::AusmpUp::callCount, ablate::finiteVolume::fluxCalculator::AusmpUp::totalTime);
 //    }

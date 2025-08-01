@@ -8,6 +8,17 @@
 #include "utilities/constants.hpp"
 #include "utilities/mathUtilities.hpp"
 #include "utilities/petscUtilities.hpp"
+double ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::totalTimeDiff = 0.0;
+int ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::callCountDiff = 0;
+double ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::totalTimeDiffEner = 0.0;
+int ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::callCountDiffEner = 0;
+double ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::totalTimeDiffSpec = 0.0;
+int ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::callCountDiffSpec = 0;
+
+double ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::totalTimeState = 0.0;
+int ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::callCountState = 0;
+double ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::totalTimeAUSM = 0.0;
+int ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::callCountAUSM = 0;
 
 ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTransport::CompactCompressibleNSSpeciesTransport(const std::shared_ptr<parameters::Parameters>& parametersIn,
                                                                                                               std::shared_ptr<eos::EOS> eosIn,
@@ -180,11 +191,12 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
     PetscReal internalEnergyL;
     PetscReal aL;
     PetscReal pL;
-
+//    double start = MPI_Wtime();
     // decode the left side
     {
         densityL = fieldL[uOff[EULER_FIELD] + CompressibleFlowFields::RHO]; // 2 reads, 1 write
         PetscReal temperatureL;
+
 
         PetscCall(advectionData->computeTemperature.function(fieldL, auxL[aOff[0]] * .67 + .33 * auxR[aOff[0]], &temperatureL, advectionData->computeTemperature.context.get()));
         // State evaluation: Temperature, Energy, a, P
@@ -199,6 +211,19 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
         PetscCall(advectionData->computeInternalEnergy.function(fieldL, temperatureL, &internalEnergyL, advectionData->computeInternalEnergy.context.get()));
         PetscCall(advectionData->computeSpeedOfSound.function(fieldL, temperatureL, &aL, advectionData->computeSpeedOfSound.context.get()));
         PetscCall(advectionData->computePressure.function(fieldL, temperatureL, &pL, advectionData->computePressure.context.get()));
+
+//        double yiSumL=0;
+//        for (PetscInt sp = 0; sp < advectionData->numberSpecies; sp++) {
+//            // Limit the bounds
+//            PetscScalar yi = fieldL[uOff[RHOYI_FIELD] + sp] / densityL;
+////            yi = PetscMax(0.0, yi);
+////            yi = PetscMin(1.0, yi);
+//            yiSumL += yi;
+//
+//        }
+//        printf("The sum of mass fractions from the LEFT state is %f \n", yiSumL);
+
+
     }
 
     PetscReal densityR;
@@ -221,15 +246,32 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
             velocityR[d] = fieldR[uOff[EULER_FIELD] + CompressibleFlowFields::RHOU + d] / densityR;
             normalVelocityR += velocityR[d] * norm[d];
         }
+//        double yiSumR=0;
+//        for (PetscInt sp = 0; sp < advectionData->numberSpecies; sp++) {
+//            // Limit the bounds
+//            PetscScalar yi = fieldR[uOff[RHOYI_FIELD] + sp] / densityR;
+////            yi = PetscMax(0.0, yi);
+////            yi = PetscMin(1.0, yi);
+//            yiSumR += yi;
+//
+//        }
+//        printf("The sum of mass fractions from the RIGHT state is %f \n", yiSumR);
 
         PetscCall(advectionData->computeInternalEnergy.function(fieldR, temperatureR, &internalEnergyR, advectionData->computeInternalEnergy.context.get()));
         PetscCall(advectionData->computeSpeedOfSound.function(fieldR, temperatureR, &aR, advectionData->computeSpeedOfSound.context.get()));
         PetscCall(advectionData->computePressure.function(fieldR, temperatureR, &pR, advectionData->computePressure.context.get()));
     }
 
+//    totalTimeState += MPI_Wtime() - start;
+//    ++callCountState;
+//    if (callCountState==10000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "State total %d time: %f s\n", callCountState, totalTimeState); }
+
     // get the face values
     PetscReal massFlux;
     PetscReal p12;
+
+//    start = MPI_Wtime();
 
     fluxCalculator::Direction direction =
         advectionData->fluxCalculatorFunction(advectionData->fluxCalculatorCtx, normalVelocityL, aL, densityL, pL, normalVelocityR, aR, densityR, pR, &massFlux, &p12);
@@ -246,6 +288,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
             flux[uOff[RHOYI_FIELD] + ns] = massFlux * fieldL[uOff[RHOYI_FIELD] + ns] / densityL * areaMag; // 7 reads, 1 write
         }
     } else if (direction == fluxCalculator::RIGHT) {
+
         flux[CompressibleFlowFields::RHO] = massFlux * areaMag;
         PetscReal velMagR = utilities::MathUtilities::MagVector(dim, velocityR);
         PetscReal HR = internalEnergyR + velMagR * velMagR / 2.0 + pR / densityR;
@@ -253,7 +296,10 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
         for (PetscInt n = 0; n < dim; n++) {
             flux[CompressibleFlowFields::RHOU + n] = velocityR[n] * massFlux * areaMag + p12 * fg->normal[n];
         }
-        for (PetscInt ns = 0; ns < advectionData->numberSpecies; ns++) flux[uOff[RHOYI_FIELD] + ns] = massFlux * fieldR[uOff[RHOYI_FIELD] + ns] / densityR * areaMag;
+        for (PetscInt ns = 0; ns < advectionData->numberSpecies; ns++){
+            flux[uOff[RHOYI_FIELD] + ns] = massFlux * fieldR[uOff[RHOYI_FIELD] + ns] / densityR * areaMag;
+
+        }
     } else {
         flux[CompressibleFlowFields::RHO] = massFlux * areaMag;
 
@@ -270,6 +316,11 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
         for (PetscInt ns = 0; ns < advectionData->numberSpecies; ns++)
             flux[uOff[RHOYI_FIELD] + ns] = massFlux * 0.5 * (fieldR[uOff[RHOYI_FIELD] + ns] + fieldL[uOff[RHOYI_FIELD] + ns]) / (0.5 * (densityL + densityR)) * areaMag;
     }
+
+//    totalTimeAUSM += MPI_Wtime() - start;
+//    ++callCountAUSM;
+//    if (callCountAUSM==10000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "AUSM total %d time: %f s\n", callCountAUSM, totalTimeAUSM); }
 
     PetscFunctionReturn(0);
 }
@@ -704,6 +755,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
                                                                                                      const PetscInt aOff_x[], const PetscScalar aux[], const PetscScalar gradAux[], PetscScalar flux[],
                                                                                                      void* ctx) {
     PetscFunctionBeginUser;
+//    double start = MPI_Wtime();
     // this order is based upon the order that they are passed into RegisterRHSFunction
     const int T = 0;
     const int VEL = 1;
@@ -753,6 +805,11 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
 
     // zero out the density flux
     flux[CompressibleFlowFields::RHO] = 0.0;
+//    totalTimeDiff += MPI_Wtime() - start;
+//    ++callCountDiff;
+//    if (callCountDiff==10000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "Diff total %d time: %f s\n", callCountDiff, totalTimeDiff); }
+
     PetscFunctionReturn(0);
 }
 
@@ -761,6 +818,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
                                                                                                            const PetscInt aOff_x[], const PetscScalar aux[], const PetscScalar gradAux[],
                                                                                                            PetscScalar flux[], void* ctx) {
     PetscFunctionBeginUser;
+//    double start = MPI_Wtime();
     // this order is based upon the order that they are passed into RegisterRHSFunction
     const int yi = 0;
     const int euler = 0;
@@ -795,6 +853,10 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
             flux[CompressibleFlowFields::RHOE] += speciesFlux;
         }
     }
+//    totalTimeDiffEner += MPI_Wtime() - start;
+//    ++callCountDiffEner;
+//    if (callCountDiffEner==10000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "DiffEner total %d time: %f s\n", callCountDiffEner, totalTimeDiffEner); }
 
     PetscFunctionReturn(0);
 }
@@ -847,6 +909,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
                                                                                                             const PetscInt aOff_x[], const PetscScalar aux[], const PetscScalar gradAux[],
                                                                                                             PetscScalar flux[], void* ctx) {
     PetscFunctionBeginUser;
+//    double start = MPI_Wtime();
     // this order is based upon the order that they are passed into RegisterRHSFunction
     const int yi = 0;
     const int euler = 0;
@@ -873,7 +936,10 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
             flux[sp] += speciesFlux;
         }
     }
-
+//    totalTimeDiffSpec += MPI_Wtime() - start;
+//    ++callCountDiffSpec;
+//    if (callCountDiffSpec==10000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "Diffspecies total %d time: %f s\n", callCountDiffSpec, totalTimeDiffSpec); }
     PetscFunctionReturn(0);
 }
 

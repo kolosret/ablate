@@ -262,7 +262,18 @@ void ablate::finiteVolume::FaceInterpolant::RestoreInterpolatedFaceVectors(Vec, 
 void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXVec, Vec locAuxVec, Vec locFVec, const std::shared_ptr<domain::Region>& solverRegion,
                                                        std::vector<FaceInterpolant::ContinuousFluxFunctionDescription>& rhsFunctions, const ablate::domain::Range& faceRange, Vec cellGeomVec,
                                                        Vec faceGeomVec) {
-    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Interpolation");
+//    PetscInt globalSizeX, globalSizeAux;
+//    VecGetSize(locXVec, &globalSizeX) >> utilities::PetscUtilities::checkError;
+    if (locAuxVec) {
+        PetscInt globalSizeAux;
+        VecGetSize(locAuxVec, &globalSizeAux) >> utilities::PetscUtilities::checkError;
+        PetscInt globalSizeX;
+        VecGetSize(locAuxVec, &globalSizeX) >> utilities::PetscUtilities::checkError;
+
+    }
+
+//    std::printf("The length of the locXVec is: %d \n",globalSizeX);
+    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Gradient");
     // get the dm
     auto dm = subDomain->GetDM();
 
@@ -356,11 +367,9 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
         }
     }
 //    EndEvent();
-    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Fluxcalc");
+    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Sourcecalc");
     // march over each face
     for (PetscInt f = faceRange.start; f < faceRange.end; f++) {
-//        StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Face1");
-
         PetscInt face = faceRange.points ? faceRange.points[f] : f;
 
         // make sure that this is a valid face

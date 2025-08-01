@@ -11,7 +11,7 @@
 #include <sys/resource.h>
 
 namespace ablate::finiteVolume {
-
+constexpr int numLabel = 7;
 class CellInterpolant : private utilities::Loggable<CellInterpolant> {
    public:
     /**
@@ -46,6 +46,7 @@ class CellInterpolant : private utilities::Loggable<CellInterpolant> {
         std::vector<PetscInt> inputFields;
         std::vector<PetscInt> auxFields;
     };
+
     void handle_error (int retval)
     {
         printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
@@ -64,6 +65,11 @@ class CellInterpolant : private utilities::Loggable<CellInterpolant> {
     // Maximum value for gradients for the multi-direction flux limiter
     const double maxLimGrad;
 
+
+    //! Vector to hold all the labels, I dont know the size right now
+    std::vector<PetscInt> flowLabelVec;
+
+
     /**
      * Function to compute the flux source terms
      */
@@ -77,6 +83,10 @@ class CellInterpolant : private utilities::Loggable<CellInterpolant> {
      */
     void ProjectToFace(const std::vector<domain::Field>& fields, PetscDS ds, const PetscFVFaceGeom& faceGeom, PetscInt cellId, const PetscFVCellGeom& cellGeom, DM dm, const PetscScalar* xArray,
                        const std::vector<DM>& dmGrads, const std::vector<const PetscScalar*>& gradArrays, PetscScalar* u, PetscScalar* grad, bool projectField = true);
+
+    void ProjectToFace(const std::vector<domain::Field>& fields, PetscDS ds, const PetscFVFaceGeom& faceGeom, PetscInt cellId, const PetscFVCellGeom& cellGeom, DM dm, const PetscScalar* xArray,
+                       const std::vector<DM>& dmGrads, const std::vector<const PetscScalar*>& gradArrays, PetscScalar* u, PetscScalar* grad, PetscInt neighborCellId , const PetscFVCellGeom& neighborCellGeom, bool projectField = true);
+
 
     /**
      * computes the cell gradients
@@ -113,7 +123,7 @@ class CellInterpolant : private utilities::Loggable<CellInterpolant> {
      * @param faceGeomVec
      * @param cellGeomVec
      */
-    CellInterpolant(std::shared_ptr<ablate::domain::SubDomain> subDomain, const std::shared_ptr<domain::Region>& solverRegion, Vec faceGeomVec, Vec cellGeomVec, double maxGradIn);
+    CellInterpolant(std::shared_ptr<ablate::domain::SubDomain> subDomain, const std::shared_ptr<domain::Region>& solverRegion, Vec faceGeomVec, Vec cellGeomVec, double maxGradIn,const ablate::domain::Range& faceRange);
     ~CellInterpolant();
 
     /**

@@ -11,6 +11,17 @@ namespace ablate::finiteVolume::processes {
 
 class CompactCompressibleNSSpeciesTransport : public FlowProcess {
    private:
+    static double totalTimeDiff;
+    static int callCountDiff;
+    static double totalTimeDiffEner;
+    static int callCountDiffEner;
+    static double totalTimeDiffSpec;
+    static int callCountDiffSpec;
+    static double totalTimeState;
+    static int callCountState;
+    static double totalTimeAUSM;
+    static int callCountAUSM;
+
     // store ctx needed for function advection function that is passed into Petsc
     struct AdvectionData {
         // flow CFL
