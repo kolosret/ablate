@@ -27,7 +27,7 @@ ablate::finiteVolume::CellInterpolant::CellInterpolant(std::shared_ptr<ablate::d
         }
     };
 
-
+//    std::cout << "constructor, the size of flowLabelvec is :" << flowLabelVec.size() << " \n";
 //    faceCellsVec.resize(2 * (faceRange.end - faceRange.start), 0);
 
 
@@ -51,52 +51,52 @@ ablate::finiteVolume::CellInterpolant::CellInterpolant(std::shared_ptr<ablate::d
 
 
 
-    for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
-        const PetscInt face = faceRange.points ? faceRange.points[f] : f;
-
-        //! The indicies are in order per face:
-        // ghost, nsupp, nchild, leftFlowLabelValue, rightFlowLabelValue
-
-
-        // make sure that this is a valid face
-        PetscInt ghost, nsupp, nchild;
-        DMLabelGetValue(ghostLabel, face, &ghost) >> utilities::PetscUtilities::checkError;
-        DMPlexGetSupportSize(dm, face, &nsupp) >> utilities::PetscUtilities::checkError;
-        DMPlexGetTreeChildren(dm, face, &nchild, nullptr) >> utilities::PetscUtilities::checkError;
-
-        flowLabelVec[numLabel*f]=ghost;
-        flowLabelVec[numLabel*f+1]=nsupp;
-        flowLabelVec[numLabel*f+2]=nchild;
-
-
-        // Get the face geometry
-        const PetscInt* faceCells;
-        PetscFVFaceGeom* fg;
-        PetscFVCellGeom *cgL, *cgR;
-        DMPlexPointLocalRead(faceDM, face, faceGeomArray, &fg) >> utilities::PetscUtilities::checkError;
-        DMPlexGetSupport(dm, face, &faceCells) >> utilities::PetscUtilities::checkError;
-        DMPlexPointLocalRead(cellDM, faceCells[0], cellGeomArray, &cgL) >> utilities::PetscUtilities::checkError;
-        DMPlexPointLocalRead(cellDM, faceCells[1], cellGeomArray, &cgR) >> utilities::PetscUtilities::checkError;
-
-        PetscInt leftFlowLabelValue = regionValue;
-        PetscInt rightFlowLabelValue = regionValue;
-        //        start = MPI_Wtime();
-        if (regionLabel) {
-            DMLabelGetValue(regionLabel, faceCells[0], &leftFlowLabelValue);
-            DMLabelGetValue(regionLabel, faceCells[1], &rightFlowLabelValue);
-        }
-        flowLabelVec[numLabel*f+3]=leftFlowLabelValue;
-        flowLabelVec[numLabel*f+4]=rightFlowLabelValue;
-
-        //Check if the cells are ghost cells
-        if (ghostLabel) {
-            DMLabelGetValue(ghostLabel, faceCells[0], &leftFlowLabelValue);
-            DMLabelGetValue(ghostLabel, faceCells[1], &rightFlowLabelValue);
-        }
-        flowLabelVec[numLabel*f+5]=leftFlowLabelValue;
-        flowLabelVec[numLabel*f+6]=rightFlowLabelValue;
-
-    }
+//    for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
+//        const PetscInt face = faceRange.points ? faceRange.points[f] : f;
+//
+//        //! The indicies are in order per face:
+//        // ghost, nsupp, nchild, leftFlowLabelValue, rightFlowLabelValue
+//
+//
+//        // make sure that this is a valid face
+//        PetscInt ghost, nsupp, nchild;
+//        DMLabelGetValue(ghostLabel, face, &ghost) >> utilities::PetscUtilities::checkError;
+//        DMPlexGetSupportSize(dm, face, &nsupp) >> utilities::PetscUtilities::checkError;
+//        DMPlexGetTreeChildren(dm, face, &nchild, nullptr) >> utilities::PetscUtilities::checkError;
+//
+//        flowLabelVec[numLabel*f]=ghost;
+//        flowLabelVec[numLabel*f+1]=nsupp;
+//        flowLabelVec[numLabel*f+2]=nchild;
+//
+//
+//        // Get the face geometry
+//        const PetscInt* faceCells;
+//        PetscFVFaceGeom* fg;
+//        PetscFVCellGeom *cgL, *cgR;
+//        DMPlexPointLocalRead(faceDM, face, faceGeomArray, &fg) >> utilities::PetscUtilities::checkError;
+//        DMPlexGetSupport(dm, face, &faceCells) >> utilities::PetscUtilities::checkError;
+//        DMPlexPointLocalRead(cellDM, faceCells[0], cellGeomArray, &cgL) >> utilities::PetscUtilities::checkError;
+//        DMPlexPointLocalRead(cellDM, faceCells[1], cellGeomArray, &cgR) >> utilities::PetscUtilities::checkError;
+//
+//        PetscInt leftFlowLabelValue = regionValue;
+//        PetscInt rightFlowLabelValue = regionValue;
+//        //        start = MPI_Wtime();
+//        if (regionLabel) {
+//            DMLabelGetValue(regionLabel, faceCells[0], &leftFlowLabelValue);
+//            DMLabelGetValue(regionLabel, faceCells[1], &rightFlowLabelValue);
+//        }
+//        flowLabelVec[numLabel*f+3]=leftFlowLabelValue;
+//        flowLabelVec[numLabel*f+4]=rightFlowLabelValue;
+//
+//        //Check if the cells are ghost cells
+//        if (ghostLabel) {
+//            DMLabelGetValue(ghostLabel, faceCells[0], &leftFlowLabelValue);
+//            DMLabelGetValue(ghostLabel, faceCells[1], &rightFlowLabelValue);
+//        }
+//        flowLabelVec[numLabel*f+5]=leftFlowLabelValue;
+//        flowLabelVec[numLabel*f+6]=rightFlowLabelValue;
+//
+//    }
 
 
 
@@ -185,7 +185,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeRHS(PetscReal time, Vec locXV
         }
     }
 //    EndEvent();
-    if (time <= 1E-6) std::cout << "The mesh has " << faceRange.end << "  faces \n" ;
+    if (time <= 1.1E-8) std::cout << "The mesh has " << faceRange.end << "  faces \n" ;
+    if (time <= 1.1E-8) std::cout << "The mesh has " << cellRange.end << "  cells \n" ;
 
     //This is measured inside the function
     ComputeFluxSourceTerms(dm,
@@ -418,8 +419,8 @@ static PetscErrorCode DMPlexApplyLimiter_Internal(DM dm, DM dmCell, PetscLimiter
 
 void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::Field& field, Vec xLocalVec, Vec& gradLocVec, DM& dmGrad, Vec cellGeomVec, Vec faceGeomVec,
                                                                   const ablate::domain::Range& faceRange, const ablate::domain::Range& cellRange) {
-    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ComputeFieldGradients");
-    // get the FVM petsc field associated with this field
+//    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ComputeFieldGradients");
+//     get the FVM petsc field associated with this field
     auto fvm = (PetscFV)subDomain->GetPetscFieldObject(field); // 1 read
     auto dm = subDomain->GetFieldDM(field); // 1 read
 
@@ -507,7 +508,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFieldGradients(const domain::
             }
         }
     }
-    EndEvent();
+//    EndEvent();
     // Check for a limiter the limiter
     PetscLimiter lim;
     PetscFVGetLimiter(fvm, &lim) >> utilities::PetscUtilities::checkError;
@@ -676,60 +677,43 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
     //    start = MPI_Wtime();
 
 
-    // March over each face in this region
-//    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ComputeSource::SourceOut");
-    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ComputeSource::Project");
-    for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
-        const PetscInt face = faceRange.points ? faceRange.points[f] : f;
 
-        // make sure that this is a valid facel
-        PetscInt ghost, nsupp, nchild;
-        DMLabelGetValue(ghostLabel, face, &ghost) >> utilities::PetscUtilities::checkError;
-        DMPlexGetSupportSize(dm, face, &nsupp) >> utilities::PetscUtilities::checkError;
-        DMPlexGetTreeChildren(dm, face, &nchild, nullptr) >> utilities::PetscUtilities::checkError;
 
-        if (ghost >= 0 || nsupp > 2 || nchild > 0) continue;
-        // Get the face geometry
-        const PetscInt* faceCells;
-        PetscFVFaceGeom* fg;
-        PetscFVCellGeom *cgL, *cgR;
-        DMPlexPointLocalRead(faceDM, face, faceGeomArray, &fg) >> utilities::PetscUtilities::checkError;
-        DMPlexGetSupport(dm, face, &faceCells) >> utilities::PetscUtilities::checkError;
-        DMPlexPointLocalRead(cellDM, faceCells[0], cellGeomArray, &cgL) >> utilities::PetscUtilities::checkError;
-        DMPlexPointLocalRead(cellDM, faceCells[1], cellGeomArray, &cgR) >> utilities::PetscUtilities::checkError;
+//    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ComputeSource::Project");
+//    for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
+//        const PetscInt face = faceRange.points ? faceRange.points[f] : f;
 //
-//        PetscInt leftFlowLabelValue = regionValue;
-//        PetscInt rightFlowLabelValue = regionValue;
-////        start = MPI_Wtime();
-//        if (regionLabel) {
-//            DMLabelGetValue(regionLabel, faceCells[0], &leftFlowLabelValue);
-//            DMLabelGetValue(regionLabel, faceCells[1], &rightFlowLabelValue);
-//        }
-
-
-//                totalTime1 += MPI_Wtime() - start;
-//                ++callCount1;
-//                if (callCount1==output_it) {
-//                    PetscPrintf(PETSC_COMM_WORLD, "Section1 total %d time: %f s\n", callCount1, totalTime1); }
-
-        // compute the left/right face values
-        ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[0], *cgL, dm, xArray, dmGrads, locGradArrays, uL, gradL, 1);
-        ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[1], *cgR, dm, xArray, dmGrads, locGradArrays, uR, gradR, 1);
-
+//        // make sure that this is a valid facel
+//        PetscInt ghost, nsupp, nchild;
+//        DMLabelGetValue(ghostLabel, face, &ghost) >> utilities::PetscUtilities::checkError;
+//        DMPlexGetSupportSize(dm, face, &nsupp) >> utilities::PetscUtilities::checkError;
+//        DMPlexGetTreeChildren(dm, face, &nchild, nullptr) >> utilities::PetscUtilities::checkError;
+//
+//        if (ghost >= 0 || nsupp > 2 || nchild > 0) continue;
+//        // Get the face geometry
+//        const PetscInt* faceCells;
+//        PetscFVFaceGeom* fg;
+//        PetscFVCellGeom *cgL, *cgR;
+//        DMPlexPointLocalRead(faceDM, face, faceGeomArray, &fg) >> utilities::PetscUtilities::checkError;
+//        DMPlexGetSupport(dm, face, &faceCells) >> utilities::PetscUtilities::checkError;
+//        DMPlexPointLocalRead(cellDM, faceCells[0], cellGeomArray, &cgL) >> utilities::PetscUtilities::checkError;
+//        DMPlexPointLocalRead(cellDM, faceCells[1], cellGeomArray, &cgR) >> utilities::PetscUtilities::checkError;
+//
+//        // compute the left/right face values
+////        ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[0], *cgL, dm, xArray, dmGrads, locGradArrays, uL, gradL, 1);
+////        ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[1], *cgR, dm, xArray, dmGrads, locGradArrays, uR, gradR, 1);
+//
 //        ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[0], *cgL, dm, xArray, dmGrads, locGradArrays, uL, gradL,faceCells[1], *cgR, 1);
 //        ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[1], *cgR, dm, xArray, dmGrads, locGradArrays, uR, gradR, faceCells[0], *cgL, 1);
-
-
-
-    }
-    EndEvent();
+//    }
+//    EndEvent();
 
 
 
 
-    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ComputeSource::SourceTotal");
+//    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ComputeSource::SourceTotal");
 
-    bool oldcode=false;
+    bool oldcode=true;
     if (oldcode) {
         for (PetscInt f = faceRange.start; f < faceRange.end; ++f) {
             const PetscInt face = faceRange.points ? faceRange.points[f] : f;
@@ -759,8 +743,8 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
                 DMLabelGetValue(regionLabel, faceCells[1], &rightFlowLabelValue);
             }
 
-            ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[0], *cgL, dm, xArray, dmGrads, locGradArrays, uL, gradL, leftFlowLabelValue == regionValue);
-            ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[1], *cgR, dm, xArray, dmGrads, locGradArrays, uR, gradR, rightFlowLabelValue == regionValue);
+//            ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[0], *cgL, dm, xArray, dmGrads, locGradArrays, uL, gradL, leftFlowLabelValue == regionValue);
+//            ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[1], *cgR, dm, xArray, dmGrads, locGradArrays, uR, gradR, rightFlowLabelValue == regionValue);
 
             ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[0], *cgL, dm, xArray, dmGrads, locGradArrays, uL, gradL,faceCells[1], *cgR, leftFlowLabelValue == regionValue);
             ProjectToFace(subDomain->GetFields(), ds, *fg, faceCells[1], *cgR, dm, xArray, dmGrads, locGradArrays, uR, gradR, faceCells[0], *cgL, rightFlowLabelValue == regionValue);
@@ -930,7 +914,7 @@ void ablate::finiteVolume::CellInterpolant::ComputeFluxSourceTerms(DM dm, PetscD
             //        EndEvent();
         }
     }
-    EndEvent();
+//    EndEvent();
 
     // cleanup
 //    StartEvent("FiniteVolumeSolver::CellInterpolant::ComputeRHS::ComputeSource::Cleanup");
@@ -1332,7 +1316,6 @@ void ablate::finiteVolume::CellInterpolant::ProjectToFace(const std::vector<doma
         if (projectField && dmGrads[field.subId]) {
             DMPlexPointLocalRead(dmGrads[field.subId], cellId, gradArrays[field.subId], &gradCell) >> utilities::PetscUtilities::checkError;
             DMPlex_WaxpyD_Internal(dim, -1, cellGeom.centroid, faceGeom.centroid, dx);
-
 
             // Apply limiter to the gradient
             auto fvm = (PetscFV)subDomain->GetPetscFieldObject(field);

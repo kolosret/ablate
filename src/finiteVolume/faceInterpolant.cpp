@@ -273,14 +273,14 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
     }
 
 //    std::printf("The length of the locXVec is: %d \n",globalSizeX);
-    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Gradient");
+//    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Gradient");
     // get the dm
     auto dm = subDomain->GetDM();
 
     // interpolate to the faces
     Vec faceSolutionVec, faceAuxVec, faceSolutionGradVec, faceAuxGradVec;
     GetInterpolatedFaceVectors(locXVec, locAuxVec, faceSolutionVec, faceAuxVec, faceSolutionGradVec, faceAuxGradVec);
-    EndEvent();
+//    EndEvent();
 //    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Setup");
 
 
@@ -367,7 +367,7 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
         }
     }
 //    EndEvent();
-    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Sourcecalc");
+//    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Sourcecalc");
     // march over each face
     for (PetscInt f = faceRange.start; f < faceRange.end; f++) {
         PetscInt face = faceRange.points ? faceRange.points[f] : f;
@@ -454,8 +454,8 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
 //            EndEvent();
         }
     }
-    EndEvent();
-    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Cleanup");
+//    EndEvent();
+//    StartEvent("FiniteVolumeSolver::FaceInterpolant::ComputeRHS::Cleanup");
     VecRestoreArrayRead(faceSolutionVec, &faceSolutionArray);
     VecRestoreArrayRead(faceSolutionGradVec, &faceSolutionGradArray);
 
@@ -467,5 +467,5 @@ void ablate::finiteVolume::FaceInterpolant::ComputeRHS(PetscReal time, Vec locXV
     VecRestoreArrayRead(cellGeomVec, &cellGeomArray) >> utilities::PetscUtilities::checkError;
     VecRestoreArrayRead(faceGeomVec, &faceGeomArray) >> utilities::PetscUtilities::checkError;
     RestoreInterpolatedFaceVectors(locXVec, locAuxVec, faceSolutionVec, faceAuxVec, faceSolutionGradVec, faceAuxGradVec);
-    EndEvent();
+//    EndEvent();
 }

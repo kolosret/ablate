@@ -11,6 +11,8 @@ void ablate::boundarySolver::lodi::IsothermalWall::Setup(ablate::boundarySolver:
     ablate::boundarySolver::lodi::LODIBoundary::Setup(bSolver);
     bSolver.RegisterFunction(IsothermalWallFunction, this, fieldNames, fieldNames, {});
 
+//    bSolver.RegisterPreRHSFunction(CorrectBoundaryEnergy, this);
+
     if (nSpecEqs) {
         bSolver.RegisterFunction(
             MirrorSpecies, this, {finiteVolume::CompressibleFlowFields::EULER_FIELD, finiteVolume::CompressibleFlowFields::DENSITY_YI_FIELD}, {finiteVolume::CompressibleFlowFields::YI_FIELD});
@@ -37,14 +39,18 @@ PetscErrorCode ablate::boundarySolver::lodi::IsothermalWall::IsothermalWallFunct
     PetscReal boundarySpeedOfSound;
     PetscReal boundaryPressure;
 
+//    boundaryTemperature=300;
+
     // Get the velocity and pressure on the surface
     {
         boundaryDensity = boundaryValues[uOff[isothermalWall->eulerId] + finiteVolume::CompressibleFlowFields::RHO];
         for (PetscInt d = 0; d < dim; d++) {
             boundaryVel[d] = boundaryValues[uOff[isothermalWall->eulerId] + finiteVolume::CompressibleFlowFields::RHOU + d] / boundaryDensity;
             boundaryNormalVelocity += boundaryVel[d] * fg->normal[d];
+            boundaryNormalVelocity += boundaryVel[d] * fg->normal[d];
         }
         PetscCall(isothermalWall->computeTemperature.function(boundaryValues, &boundaryTemperature, isothermalWall->computeTemperature.context.get()));
+//        boundaryTemperature=300;
         PetscCall(isothermalWall->computeSpeedOfSound.function(boundaryValues, boundaryTemperature, &boundarySpeedOfSound, isothermalWall->computeSpeedOfSound.context.get()));
         PetscCall(isothermalWall->computePressureFromTemperature.function(boundaryValues, boundaryTemperature, &boundaryPressure, isothermalWall->computePressureFromTemperature.context.get()));
     }
@@ -135,9 +141,120 @@ PetscErrorCode ablate::boundarySolver::lodi::IsothermalWall::IsothermalWallFunct
                              scriptL.data(),
                              transformationMatrix,
                              source);
+//    for (PetscInt d = 0; d < (2+dim+isothermalWall->nSpecEqs); d++) {
+//        source[d]=0;
+//    }
 
     PetscFunctionReturn(0);
 }
+PetscErrorCode ablate::boundarySolver::lodi::IsothermalWall::CorrectBoundaryEnergy(
+    ablate::boundarySolver::BoundarySolver& solver,
+    TS ts, PetscReal time, bool initialStage, Vec locX, void* ctx) {
+
+    PetscFunctionBeginUser;
+
+    auto isothermalWall = reinterpret_cast<IsothermalWall*>(ctx);
+    auto& subDomain = solver.GetSubDomain();
+
+    // Get field information
+    const auto& eulerField = subDomain.GetField(finiteVolume::CompressibleFlowFields::EULER_FIELD);
+    const auto& densityYiField = subDomain.GetField(finiteVolume::CompressibleFlowFields::DENSITY_YI_FIELD);
+
+    // Get the DM and dimension
+    DM dm = subDomain.GetDM();
+    PetscInt dim = subDomain.GetDimensions();
+
+    // Get array access to the local vector
+    PetscScalar* locXArray;
+    PetscCall(VecGetArray(locX, &locXArray));
+
+    // March over each boundary cell in the solver region
+    ablate::domain::Range cellRange;
+    solver.GetCellRange(cellRange);
+
+    for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
+        PetscInt boundaryCell = cellRange.points ? cellRange.points[c] : c;
+
+        // Get pointer to the boundary cell data
+        PetscScalar* cellData;
+        PetscCall(DMPlexPointLocalRef(dm, boundaryCell, locXArray, &cellData));
+
+        if (cellData) {
+            // Extract conserved variables
+            PetscReal rho_old = cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHO];
+            PetscReal rhoE = cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOE];
+
+//            PetscReal rhoYi = cellData[densityYiField.offset];
+
+            //At this point Idk whats going on with the expansion behind the rocket. Pin the density to 0.001 ... Kolos 9/21/25
+
+            if (rho_old<0){
+                std::cout << "The density is negative for cell: " << boundaryCell  << " \n";
+
+            }
+
+            rho_old = PetscMax(0.001, rho_old);
+            PetscReal rho = PetscMax(100, rho_old);
+            // TODO something smarter maybe? ...
+
+            //Reset the density
+            cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHO] = rho;
+
+            //Reset the momentum
+            PetscReal mom;
+            for (PetscInt d = 0; d < dim; d++) {
+                mom=cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOU+d];
+                cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOU+d] = mom / rho_old * rho;
+            }
+
+            // Reset the Species
+            PetscReal yi;
+            for (PetscInt sp = 0; sp < isothermalWall->nSpecEqs; sp++) {
+                yi=cellData[densityYiField.offset+sp];
+                cellData[densityYiField.offset+sp] = yi / rho_old * rho;
+
+            }
+
+
+            // Calculate kinetic energy
+            PetscReal KE = 0.0;
+            for (PetscInt d = 0; d < dim; ++d) {
+                PetscReal momentum_d = cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOU + d];
+                KE += momentum_d * momentum_d;
+            }
+            KE = 0.5 * KE / rho;
+
+            // Sensible energy
+            PetscReal e_current = rhoE / rho_old - KE;
+
+
+            PetscReal e_tmp;
+            PetscCall(isothermalWall->computeInternalEnergyFromTemperature.function(cellData + eulerField.offset,
+                isothermalWall->wallTemperature, &e_tmp, isothermalWall->computeInternalEnergyFromTemperature.context.get()));
+
+            PetscReal e_corrected = PetscMax(e_tmp, e_current);
+            PetscReal e_corrected_total = e_corrected+ KE;
+
+            e_corrected_total = e_tmp + KE;
+
+            cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOE] = rho * (e_corrected_total);
+
+
+
+
+
+        }
+    }
+
+    // Don't forget to restore the range
+    solver.RestoreRange(cellRange);
+
+    PetscCall(VecRestoreArray(locX, &locXArray));
+
+    PetscFunctionReturn(0);
+}
+
+
 PetscErrorCode ablate::boundarySolver::lodi::IsothermalWall::MirrorSpecies(PetscInt dim, const ablate::boundarySolver::BoundarySolver::BoundaryFVFaceGeom *fg, const PetscFVCellGeom *boundaryCell,
                                                                            const PetscInt *uOff, PetscScalar *boundaryValues, const PetscScalar *stencilValues, const PetscInt *aOff,
                                                                            PetscScalar *auxValues, const PetscScalar *stencilAuxValues, void *ctx) {

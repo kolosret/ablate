@@ -191,7 +191,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
     PetscReal internalEnergyL;
     PetscReal aL;
     PetscReal pL;
-    double start = MPI_Wtime();
+//    double start = MPI_Wtime();
     // decode the left side
     {
         densityL = fieldL[uOff[EULER_FIELD] + CompressibleFlowFields::RHO]; // 2 reads, 1 write
@@ -200,7 +200,10 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
 
         PetscCall(advectionData->computeTemperature.function(fieldL, auxL[aOff[0]] * .67 + .33 * auxR[aOff[0]], &temperatureL, advectionData->computeTemperature.context.get()));
         // State evaluation: Temperature, Energy, a, P
-
+        if(std::isnan(temperatureL)) {
+            std::cout << "temperatureL is NaN." << std::endl;
+            temperatureL=273;
+        }
 
         // Get the velocity in this direction
         normalVelocityL = 0.0; // 0 reads, 1 write
@@ -239,7 +242,10 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
         PetscReal temperatureR;
 
         PetscCall(advectionData->computeTemperature.function(fieldR, auxR[aOff[0]] * .67 + .33 * auxL[aOff[0]], &temperatureR, advectionData->computeTemperature.context.get()));
-
+        if(std::isnan(temperatureR)) {
+            std::cout << "temperatureR is NaN." << std::endl;
+            temperatureR=273;
+        }
         // Get the velocity in this direction
         normalVelocityR = 0.0;
         for (PetscInt d = 0; d < dim; d++) {
@@ -262,16 +268,16 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
         PetscCall(advectionData->computePressure.function(fieldR, temperatureR, &pR, advectionData->computePressure.context.get()));
     }
 
-    totalTimeState += MPI_Wtime() - start;
-    ++callCountState;
-    if (callCountState==100000) {
-        PetscPrintf(PETSC_COMM_WORLD, "State total %d time: %f s\n", callCountState, totalTimeState); }
+//    totalTimeState += MPI_Wtime() - start;
+//    ++callCountState;
+//    if (callCountState==1000000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "State total %d time: %f s\n", callCountState, totalTimeState); }
 
     // get the face values
     PetscReal massFlux;
     PetscReal p12;
 
-    start = MPI_Wtime();
+//    start = MPI_Wtime();
 
     fluxCalculator::Direction direction =
         advectionData->fluxCalculatorFunction(advectionData->fluxCalculatorCtx, normalVelocityL, aL, densityL, pL, normalVelocityR, aR, densityR, pR, &massFlux, &p12);
@@ -317,10 +323,10 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
             flux[uOff[RHOYI_FIELD] + ns] = massFlux * 0.5 * (fieldR[uOff[RHOYI_FIELD] + ns] + fieldL[uOff[RHOYI_FIELD] + ns]) / (0.5 * (densityL + densityR)) * areaMag;
     }
 
-    totalTimeAUSM += MPI_Wtime() - start;
-    ++callCountAUSM;
-    if (callCountAUSM==100000) {
-        PetscPrintf(PETSC_COMM_WORLD, "AUSM total %d time: %f s\n", callCountAUSM, totalTimeAUSM); }
+//    totalTimeAUSM += MPI_Wtime() - start;
+//    ++callCountAUSM;
+//    if (callCountAUSM==1000000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "AUSM total %d time: %f s\n", callCountAUSM, totalTimeAUSM); }
 
     PetscFunctionReturn(0);
 }
@@ -755,7 +761,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
                                                                                                      const PetscInt aOff_x[], const PetscScalar aux[], const PetscScalar gradAux[], PetscScalar flux[],
                                                                                                      void* ctx) {
     PetscFunctionBeginUser;
-    double start = MPI_Wtime();
+//    double start = MPI_Wtime();
     // this order is based upon the order that they are passed into RegisterRHSFunction
     const int T = 0;
     const int VEL = 1;
@@ -805,10 +811,10 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
 
     // zero out the density flux
     flux[CompressibleFlowFields::RHO] = 0.0;
-    totalTimeDiff += MPI_Wtime() - start;
-    ++callCountDiff;
-    if (callCountDiff==100000) {
-        PetscPrintf(PETSC_COMM_WORLD, "Diff total %d time: %f s\n", callCountDiff, totalTimeDiff); }
+//    totalTimeDiff += MPI_Wtime() - start;
+//    ++callCountDiff;
+//    if (callCountDiff==1000000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "Diff total %d time: %f s\n", callCountDiff, totalTimeDiff); }
 
     PetscFunctionReturn(0);
 }
@@ -818,7 +824,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
                                                                                                            const PetscInt aOff_x[], const PetscScalar aux[], const PetscScalar gradAux[],
                                                                                                            PetscScalar flux[], void* ctx) {
     PetscFunctionBeginUser;
-    double start = MPI_Wtime();
+//    double start = MPI_Wtime();
     // this order is based upon the order that they are passed into RegisterRHSFunction
     const int yi = 0;
     const int euler = 0;
@@ -853,10 +859,10 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
             flux[CompressibleFlowFields::RHOE] += speciesFlux;
         }
     }
-    totalTimeDiffEner += MPI_Wtime() - start;
-    ++callCountDiffEner;
-    if (callCountDiffEner==100000) {
-        PetscPrintf(PETSC_COMM_WORLD, "DiffEner total %d time: %f s\n", callCountDiffEner, totalTimeDiffEner); }
+//    totalTimeDiffEner += MPI_Wtime() - start;
+//    ++callCountDiffEner;
+//    if (callCountDiffEner==1000000) {
+//        PetscPrintf(PETSC_COMM_WORLD, "DiffEner total %d time: %f s\n", callCountDiffEner, totalTimeDiffEner); }
 
     PetscFunctionReturn(0);
 }
@@ -909,7 +915,7 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
                                                                                                             const PetscInt aOff_x[], const PetscScalar aux[], const PetscScalar gradAux[],
                                                                                                             PetscScalar flux[], void* ctx) {
     PetscFunctionBeginUser;
-    double start = MPI_Wtime();
+//    double start = MPI_Wtime();
     // this order is based upon the order that they are passed into RegisterRHSFunction
     const int yi = 0;
     const int euler = 0;
@@ -936,12 +942,12 @@ PetscErrorCode ablate::finiteVolume::processes::CompactCompressibleNSSpeciesTran
             flux[sp] += speciesFlux;
         }
     }
-    totalTimeDiffSpec += MPI_Wtime() - start;
-    ++callCountDiffSpec;
-    int rank;
-    MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-    if (callCountDiffSpec==10000 && rank == 0) {
-        PetscPrintf(PETSC_COMM_WORLD, "Diffspecies total %d time: %f s on rank: %d\n", callCountDiffSpec, totalTimeDiffSpec,rank); }
+//    totalTimeDiffSpec += MPI_Wtime() - start;
+//    ++callCountDiffSpec;
+//    int rank;
+//    MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+//    if (callCountDiffSpec==1000000 && rank == 0) {
+//        PetscPrintf(PETSC_COMM_WORLD, "Diffspecies total %d time: %f s on rank: %d\n", callCountDiffSpec, totalTimeDiffSpec,rank); }
     PetscFunctionReturn(0);
 }
 

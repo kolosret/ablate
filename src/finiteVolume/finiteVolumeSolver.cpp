@@ -486,8 +486,27 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::PreRHSFunction(TS ts, P
         PetscCall(rhsFunction.first(*this, ts, time, initialStage, locX, rhsFunction.second));
     }
     EndEvent();
+
+    StartEvent("FiniteVolumeSolver::PreRHSFunction::FixEnergy");
+    try {
+        // update any aux fields, including ghost cells
+//        FixEnergy(subDomain->GetAuxVector(),subDomain->GetSolutionVector());
+    } catch (std::exception& exception) {
+        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in Energy fix: %s", exception.what());
+    }
+    EndEvent();
+
     PetscFunctionReturn(0);
 }
+
+//PetscErrorCode FixEnergy(Vec locAuxField,Vec locSolField){
+//
+//    double a=1;
+//
+//    PetscFunctionReturn(0);
+//}
+
+
 
 #include "registrar.hpp"
 REGISTER(ablate::solver::Solver, ablate::finiteVolume::FiniteVolumeSolver, "finite volume solver", ARG(std::string, "id", "the name of the flow field"),

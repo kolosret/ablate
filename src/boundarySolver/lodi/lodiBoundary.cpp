@@ -231,5 +231,6 @@ void ablate::boundarySolver::lodi::LODIBoundary::Setup(PetscInt dimsIn, PetscInt
     computeSpecificHeatConstantPressure = eos->GetThermodynamicTemperatureFunction(eos::ThermodynamicProperty::SpecificHeatConstantPressure, fields);
     computeSpecificHeatConstantVolume = eos->GetThermodynamicTemperatureFunction(eos::ThermodynamicProperty::SpecificHeatConstantVolume, fields);
     computeSensibleEnthalpyFunction = eos->GetThermodynamicTemperatureFunction(eos::ThermodynamicProperty::SensibleEnthalpy, fields);
+    computeInternalEnergyFromTemperature = eos->GetThermodynamicTemperatureFunction(eos::ThermodynamicProperty::InternalSensibleEnergy, fields);
     computePressure = eos->GetThermodynamicFunction(eos::ThermodynamicProperty::Pressure, fields);
 }

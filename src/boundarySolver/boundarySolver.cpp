@@ -847,6 +847,14 @@ PetscErrorCode ablate::boundarySolver::BoundarySolver::PreRHSFunction(TS ts, Pet
         PetscCall(rhsFunction.first(*this, ts, time, initialStage, locX, rhsFunction.second));
     }
     EndEvent();
+
+
+    try {
+        // update any aux fields, including ghost cells
+        UpdateAuxFields(time, locX, subDomain->GetAuxVector());
+    } catch (std::exception& exception) {
+        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in UpdateAuxFields: %s", exception.what());
+    }
     PetscFunctionReturn(0);
 }
 

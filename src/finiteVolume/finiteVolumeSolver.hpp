@@ -39,7 +39,15 @@ class FiniteVolumeSolver : public solver::CellSolver,
     //! store an enum for the fields in the meshCharacteristicsDm
     enum MeshCharacteristics { MIN_CELL_RADIUS = 0, MAX_CELL_RADIUS };
 
+//    //Additional post step to fix temperature
+//    void PostStep(TS ts);
+
    private:
+
+    //Function to limit the energy
+    PetscErrorCode FixEnergy(Vec locXVec,Vec locSolVec);
+
+
     /**
      * struct to describe the compute timestamp functions
      */

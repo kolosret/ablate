@@ -129,15 +129,14 @@ PetscErrorCode ablate::eos::zerorkEOS::TemperatureTemperatureFunction(const Pets
 
     // compute the internal energy needed to compute temperature from the sensible enthalpy
     double sensibleenergy = conserved[functionContext->eulerOffset + ablate::finiteVolume::CompressibleFlowFields::RHOE] / density - 0.5 * speedSquare;
-    double enthalpymix = functionContext->mech->getMassEnthalpyFromTY(298.15, &reactorMassFrac[0]);
-    sensibleenergy += enthalpymix;
+    double energymix = functionContext->mech->getMassIntEnergyFromTY(298.15, &reactorMassFrac[0]);
+    sensibleenergy += energymix;
 
     // set the temperature from zerork
     *temperature = functionContext->mech->getTemperatureFromEY(sensibleenergy, &reactorMassFrac[0], temperatureGuess);
 
     PetscFunctionReturn(0);
 
-    PetscFunctionReturn(0);
 }
 PetscErrorCode ablate::eos::zerorkEOS::TemperatureMassFractionFunction(const PetscReal *conserved, const PetscReal *yi, PetscReal *property, void *ctx) {
     return TemperatureTemperatureMassFractionFunction(conserved, yi, 300, property, ctx);
@@ -160,8 +159,8 @@ PetscErrorCode ablate::eos::zerorkEOS::TemperatureTemperatureMassFractionFunctio
 
     // compute the internal energy needed to compute temperature from the sensible enthalpy
     double sensibleenergy = conserved[functionContext->eulerOffset + ablate::finiteVolume::CompressibleFlowFields::RHOE] / density - 0.5 * speedSquare;
-    double enthalpyMixFormation = functionContext->mech->getMassEnthalpyFromTY(298.15, &reactorMassFrac[0]);
-    sensibleenergy += enthalpyMixFormation;
+    double energymix = functionContext->mech->getMassIntEnergyFromTY(298.15, &reactorMassFrac[0]);
+    sensibleenergy += energymix;
 
     // set the temperature from zerork
     *temperature = functionContext->mech->getTemperatureFromEY(sensibleenergy, &reactorMassFrac[0], temperatureGuess);
@@ -196,9 +195,9 @@ PetscErrorCode ablate::eos::zerorkEOS::InternalSensibleEnergyTemperatureFunction
     FillreactorMassFracVectorFromDensityMassFractions(numSpc, density, conserved + functionContext->densityYiOffset, reactorMassFrac);
 
     double energyMix = functionContext->mech->getMassIntEnergyFromTY(temperature, &reactorMassFrac[0]);
-    double enthalpyMixFormation = functionContext->mech->getMassEnthalpyFromTY(298.15, &reactorMassFrac[0]);
+    double uMixFormation = functionContext->mech->getMassIntEnergyFromTY(298.15, &reactorMassFrac[0]);
 
-    *sensibleEnergyTemperature = energyMix - enthalpyMixFormation;
+    *sensibleEnergyTemperature = energyMix - uMixFormation;
 
     PetscFunctionReturn(0);
 }
@@ -220,9 +219,9 @@ PetscErrorCode ablate::eos::zerorkEOS::InternalSensibleEnergyTemperatureMassFrac
     FillreactorMassFracVectorFromMassFractions(numSpc, yi, reactorMassFrac);
 
     double energyMix = functionContext->mech->getMassIntEnergyFromTY(temperature, &reactorMassFrac[0]);
-    double enthalpyMixFormation = functionContext->mech->getMassEnthalpyFromTY(298.15, &reactorMassFrac[0]);
+    double uMixFormation = functionContext->mech->getMassIntEnergyFromTY(298.15, &reactorMassFrac[0]);
 
-    *sensibleEnergyTemperature = energyMix - enthalpyMixFormation;
+    *sensibleEnergyTemperature = energyMix - uMixFormation;
 
     PetscFunctionReturn(0);
 }
@@ -612,9 +611,9 @@ ablate::eos::EOSFunction ablate::eos::zerorkEOS::GetFieldFunctionFunction(const 
                 PetscReal density = mech->getDensityFromTPY(temperature, pressure, &reactorMassFrac[0]);
 
                 double energyMix = mech->getMassIntEnergyFromTY(temperature, &reactorMassFrac[0]);
-                double enthalpyMixFormation = mech->getMassEnthalpyFromTY(298.15, &reactorMassFrac[0]);
+                double energyMixFormation = mech->getMassIntEnergyFromTY(298.15, &reactorMassFrac[0]);
 
-                double sensibleInternalEnergy = energyMix - enthalpyMixFormation;
+                double sensibleInternalEnergy = energyMix - energyMixFormation;
 
                 // convert to total sensibleEnergy
                 PetscReal kineticEnergy = 0;
@@ -643,9 +642,9 @@ ablate::eos::EOSFunction ablate::eos::zerorkEOS::GetFieldFunctionFunction(const 
                 std::vector<double> reactorMassFrac(nSpc, 0.);
                 FillreactorMassFracVectorFromMassFractions(nSpc, yi, reactorMassFrac);
 
-                double enthalpyMixFormation = mech->getMassEnthalpyFromTY(298.15, &reactorMassFrac[0]);
+                double energyMixFormation = mech->getMassIntEnergyFromTY(298.15, &reactorMassFrac[0]);
 
-                double internalEnergy = sensibleInternalEnergy + enthalpyMixFormation;
+                double internalEnergy = sensibleInternalEnergy + energyMixFormation;
                 double temperature = mech->getTemperatureFromEY(internalEnergy, &reactorMassFrac[0], 300);
 
                 PetscReal density = mech->getDensityFromTPY(temperature, pressure, &reactorMassFrac[0]);
@@ -703,9 +702,9 @@ ablate::eos::EOSFunction ablate::eos::zerorkEOS::GetFieldFunctionFunction(const 
                 std::vector<double> reactorMassFrac(nSpc, 0.);
                 FillreactorMassFracVectorFromMassFractions(nSpc, yi, reactorMassFrac);
 
-                double enthalpyMixFormation = mech->getMassEnthalpyFromTY(298.15, &reactorMassFrac[0]);
+                double energyMixFormation = mech->getMassIntEnergyFromTY(298.15, &reactorMassFrac[0]);
 
-                double internalEnergy = sensibleInternalEnergy + enthalpyMixFormation;
+                double internalEnergy = sensibleInternalEnergy + energyMixFormation;
                 double temperature = mech->getTemperatureFromEY(internalEnergy, &reactorMassFrac[0], 300);
 
                 PetscReal density = mech->getDensityFromTPY(temperature, pressure, &reactorMassFrac[0]);

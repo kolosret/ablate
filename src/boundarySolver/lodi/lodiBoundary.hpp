@@ -50,6 +50,7 @@ class LODIBoundary : public BoundaryProcess {
     eos::ThermodynamicTemperatureFunction computeSpecificHeatConstantVolume;
     eos::ThermodynamicTemperatureFunction computeSensibleEnthalpyFunction;
     eos::ThermodynamicFunction computePressure;
+    eos::ThermodynamicTemperatureFunction computeInternalEnergyFromTemperature;
 
    public:
     explicit LODIBoundary(std::shared_ptr<eos::EOS> eos, std::shared_ptr<finiteVolume::processes::PressureGradientScaling> pressureGradientScaling = {});

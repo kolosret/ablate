@@ -9,6 +9,9 @@ class IsothermalWall : public LODIBoundary {
     explicit IsothermalWall(std::shared_ptr<eos::EOS> eos, std::shared_ptr<finiteVolume::processes::PressureGradientScaling> pressureGradientScaling = {});
 
     void Setup(ablate::boundarySolver::BoundarySolver& bSolver) override;
+    static PetscErrorCode CorrectBoundaryEnergy(ablate::boundarySolver::BoundarySolver& solver,
+                                                TS ts, PetscReal time, bool initialStage,
+                                                Vec locX, void* ctx);
 
     static PetscErrorCode IsothermalWallFunction(PetscInt dim, const boundarySolver::BoundarySolver::BoundaryFVFaceGeom* fg, const PetscFVCellGeom* boundaryCell, const PetscInt uOff[],
                                                  const PetscScalar* boundaryValues, const PetscScalar* stencilValues[], const PetscInt aOff[], const PetscScalar* auxValues,
@@ -16,6 +19,7 @@ class IsothermalWall : public LODIBoundary {
                                                  PetscScalar source[], void* ctx);
 
    private:
+    double wallTemperature = 300;
     static PetscErrorCode MirrorSpecies(PetscInt dim, const BoundarySolver::BoundaryFVFaceGeom* fg, const PetscFVCellGeom* boundaryCell, const PetscInt uOff[], PetscScalar* boundaryValues,
                                         const PetscScalar* stencilValues, const PetscInt aOff[], PetscScalar* auxValues, const PetscScalar* stencilAuxValues, void* ctx);
 };
