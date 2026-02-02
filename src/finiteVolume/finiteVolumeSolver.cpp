@@ -236,7 +236,7 @@ PetscErrorCode ablate::finiteVolume::FiniteVolumeSolver::ComputeRHSFunction(Pets
     GetFaceRange(faceRange);
     GetCellRange(cellRange);
 
-    PAPI_library_init(PAPI_VER_CURRENT);
+//    PAPI_library_init(PAPI_VER_CURRENT);
 
     try {
 //        MPI_Barrier(PETSC_COMM_WORLD);

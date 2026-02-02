@@ -6,7 +6,7 @@
 #include "domain/range.hpp"
 #include "domain/region.hpp"
 #include "domain/subDomain.hpp"
-#include "/p/lustre2/kolosret/papi/src/install/include/papi.h"
+//#include "/p/lustre2/kolosret/papi/src/install/include/papi.h"
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -47,11 +47,11 @@ class CellInterpolant : private utilities::Loggable<CellInterpolant> {
         std::vector<PetscInt> auxFields;
     };
 
-    void handle_error (int retval)
-    {
-        printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
-        exit(1);
-    }
+//    void handle_error (int retval)
+//    {
+//        printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
+//        exit(1);
+//    }
 
     double totalTime=0.0;
     int callCount=0;

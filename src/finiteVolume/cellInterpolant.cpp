@@ -1386,6 +1386,18 @@ void ablate::finiteVolume::CellInterpolant::ProjectToFace(const std::vector<doma
                     for (PetscInt d = 0; d < dim; d++) {
                         grad[dirOffsets[field.subId] + c * dim + d] = limitedGrad[c * dim + d];
                     }
+
+
+                    double xlim_min=0.30841;
+                    double xlim_max=1; //0.351656//0.341656 is the end plane of the nozzle
+                    //Overwrite with cell centered values. This is just so the rocket doesnt break in the nozzle... 11/1/25
+                    if(xlim_min<cellGeom.centroid[0] && cellGeom.centroid[0]<xlim_max){
+                        u[offsets[field.subId] + c] = xCell[c];
+                        for (PetscInt d = 0; d < dim; d++) {
+                            grad[dirOffsets[field.subId] + c * dim + d] = gradCell[c * dim + d];
+                        }
+                    }
+
                 }
             } else {
                 // No limiting - use original gradient directly

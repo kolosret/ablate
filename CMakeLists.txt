@@ -70,7 +70,7 @@ target_link_libraries(ablateLibrary
         nlohmann_json::nlohmann_json
         ${HDF5_LIBRARIES}
         ZERORK::zerork_cfd_plugin
-        PAPI
+#        PAPI
         PRIVATE
         chrestCompilerFlags)
 

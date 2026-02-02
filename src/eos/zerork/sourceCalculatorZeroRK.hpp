@@ -47,6 +47,10 @@ class SourceCalculator : public ChemistryModel::SourceCalculator, private utilit
         // max iterations for cvode
         int dumpfailed = 0;
 
+        int n_reactors_max = 10000;
+
+        int n_reactors_min = 100;
+
         // max iterations for cvode
         int maxiteration = 10000;
 
@@ -99,7 +103,32 @@ class SourceCalculator : public ChemistryModel::SourceCalculator, private utilit
      */
     void AddSource(const ablate::domain::Range& cellRange, Vec localXVec, Vec localFVec) override;
 
+    //MMixture fraction calculator for ZeroRK load balancing
+    double ComputeMixtureFraction(const double* yi) const;
+
+    double SutherlandDiff(double T,double rho);
+
+    void ComputeMixtureFractionGradients(
+        DM dm,
+        const ablate::domain::Range& cellRange,
+        const std::vector<double>& zMixValues,
+        std::vector<double>& zMixGrad,
+        PetscInt dim);
+
    private:
+
+    //member variables holding required stuff for zmix calculator
+    std::vector<double> zMixCoefficients;
+    double zMixFuel = 0.0;
+    double zMixOxidizer = 0.0;
+
+
+//    std::vector<double> mixtureFraction;
+    std::vector<double> reactorzMix;
+    std::vector<double> reactorzMixGrad;
+
+    DM dmZMixGrad = nullptr;  // DM for mixture fraction gradient
+
     std::vector<double> sourceZeroRKAtI;
     zerork_handle zrm_handle;
     //! copy of constraints

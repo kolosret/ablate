@@ -11,7 +11,7 @@ void ablate::boundarySolver::lodi::IsothermalWall::Setup(ablate::boundarySolver:
     ablate::boundarySolver::lodi::LODIBoundary::Setup(bSolver);
     bSolver.RegisterFunction(IsothermalWallFunction, this, fieldNames, fieldNames, {});
 
-//    bSolver.RegisterPreRHSFunction(CorrectBoundaryEnergy, this);
+    bSolver.RegisterPreRHSFunction(CorrectBoundaryEnergy, this);
 
     if (nSpecEqs) {
         bSolver.RegisterFunction(
@@ -105,6 +105,7 @@ PetscErrorCode ablate::boundarySolver::lodi::IsothermalWall::IsothermalWallFunct
     // Get scriptL
     std::vector<PetscReal> scriptL(isothermalWall->nEqs);
     scriptL[1 + dim] = lambda[1 + dim] * (dPdNorm - boundaryDensity * dVeldNorm * alpha2 * (velNormPrim - boundaryNormalVelocity - speedOfSoundPrim));  // Outgoing
+    scriptL[1 + dim] = 0; //L3
     // acoustic
     // wave
     scriptL[0] = scriptL[1 + dim];  // Incoming acoustic wave
@@ -182,24 +183,19 @@ PetscErrorCode ablate::boundarySolver::lodi::IsothermalWall::CorrectBoundaryEner
         if (cellData) {
             // Extract conserved variables
             PetscReal rho_old = cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHO];
-            PetscReal rhoE = cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOE];
-
-//            PetscReal rhoYi = cellData[densityYiField.offset];
-
-            //At this point Idk whats going on with the expansion behind the rocket. Pin the density to 0.001 ... Kolos 9/21/25
+//            PetscReal rhoE = cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOE];
 
             if (rho_old<0){
                 std::cout << "The density is negative for cell: " << boundaryCell  << " \n";
-
             }
 
-            rho_old = PetscMax(0.001, rho_old);
-            PetscReal rho = PetscMax(100, rho_old);
+            PetscReal rho = PetscMax(0.005, rho_old);
+            rho = PetscMin(100, rho);
             // TODO something smarter maybe? ...
 
             //Reset the density
             cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHO] = rho;
-
+//            cellData[eulerField.offset + fp::RHO] = rho;
             //Reset the momentum
             PetscReal mom;
             for (PetscInt d = 0; d < dim; d++) {
@@ -225,19 +221,19 @@ PetscErrorCode ablate::boundarySolver::lodi::IsothermalWall::CorrectBoundaryEner
             KE = 0.5 * KE / rho;
 
             // Sensible energy
-            PetscReal e_current = rhoE / rho_old - KE;
+//            PetscReal e_current = rhoE / rho_old - KE;
 
 
             PetscReal e_tmp;
             PetscCall(isothermalWall->computeInternalEnergyFromTemperature.function(cellData + eulerField.offset,
                 isothermalWall->wallTemperature, &e_tmp, isothermalWall->computeInternalEnergyFromTemperature.context.get()));
 
-            PetscReal e_corrected = PetscMax(e_tmp, e_current);
-            PetscReal e_corrected_total = e_corrected+ KE;
+//            PetscReal e_corrected = PetscMax(e_tmp, e_current);
+//            PetscReal e_corrected_total = e_corrected+ KE;
 
-            e_corrected_total = e_tmp + KE;
+            e_tmp = e_tmp + KE;
 
-            cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOE] = rho * (e_corrected_total);
+            cellData[eulerField.offset + finiteVolume::CompressibleFlowFields::RHOE] = rho * (e_tmp);
 
 
 
@@ -272,6 +268,11 @@ PetscErrorCode ablate::boundarySolver::lodi::IsothermalWall::MirrorSpecies(Petsc
         boundaryValues[uOff[DENSITY_YI] + sp] = yi * boundaryDensity;
         auxValues[aOff[YI] + sp] = yi;
     }
+//    boundaryValues[uOff[EULER_FIELD] + RHO] = stencilValues[uOff[EULER_FIELD] + RHO];
+//    boundaryValues[uOff[EULER_FIELD] + RHO+1] = stencilValues[uOff[EULER_FIELD] + RHO+1];
+//    boundaryValues[uOff[EULER_FIELD] + RHO+2] = stencilValues[uOff[EULER_FIELD] + RHO+2];
+//    boundaryValues[uOff[EULER_FIELD] + RHO+3] = stencilValues[uOff[EULER_FIELD] + RHO+3];
+//    boundaryValues[uOff[EULER_FIELD] + RHO+4] = stencilValues[uOff[EULER_FIELD] + RHO+4];
 
     PetscFunctionReturn(0);
 }
